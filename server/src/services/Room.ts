@@ -117,13 +117,13 @@ export class Room {
     rtpParameters: RtpParameters,
     kind: MediaKind
   ) {
-    return new Promise(async (resolve, reject) => {
-      let producer = await this.peers
-        .get(socketId)!
-        .createProducer(producerTransportId, rtpParameters, kind);
+    let producer = await this.peers
+      .get(socketId)!
+      .createProducer(producerTransportId, rtpParameters, kind);
 
-      resolve(producer.id);
-    });
+    const name = this.peers.get(socketId)?.name;
+
+    return { producer_id: producer.id, producer_socket_id: socketId, name };
   }
 
   async consume(
@@ -160,6 +160,8 @@ export class Room {
 
       this.peers.get(socketId)?.removeConsumer(consumer.consumer.id);
     });
+
+    return consumer.params;
   }
 
   async removePeer(socketId: number) {

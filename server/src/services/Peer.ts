@@ -7,6 +7,7 @@ import {
 } from "mediasoup/node/lib/RtpParameters";
 import { Transport } from "mediasoup/node/lib/Transport";
 import { DtlsParameters } from "mediasoup/node/lib/fbs/web-rtc-transport";
+import { WebSocket } from "ws";
 
 export class Peer {
   id: number;
@@ -14,13 +15,15 @@ export class Peer {
   transports: Map<string, Transport>;
   producers: Map<string, Producer>;
   consumers: Map<string, Consumer>;
+  socket: WebSocket;
 
-  constructor(socket_id: number, name: string) {
+  constructor(socket_id: number, name: string, socket: WebSocket) {
     this.id = socket_id;
     this.name = name;
     this.transports = new Map();
     this.producers = new Map();
     this.consumers = new Map();
+    this.socket = socket;
   }
 
   addTransport(transport: Transport) {
