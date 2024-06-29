@@ -1,5 +1,7 @@
 export enum WebSocketEventType {
   ERROR = "error",
+  DISCONNECT = "disconnect",
+  EXIT_ROOM = "exitRoom",
 
   // server side
   CREATE_ROOM = "createRoom",
@@ -11,6 +13,7 @@ export enum WebSocketEventType {
   PRODUCE = "produce",
   CONSUME = "consume",
   GET_MY_ROOM_INFO = "getMyRoomInfo",
+  PRODUCER_CLOSED = "producerClosed",
 
   // client side
   ROOM_CREATED_MESSAGE = "createdRoom",

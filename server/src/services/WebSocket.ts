@@ -38,6 +38,10 @@ export class WebSocketService {
   ) {
     const event = { ...message, socketId };
     switch (event.type) {
+      case WebSocketEventType.DISCONNECT:
+        this.onDisconnect(event, socket);
+        break;
+
       case WebSocketEventType.CREATE_ROOM:
         this.onCreateRoom(event, socket);
         break;
@@ -72,6 +76,14 @@ export class WebSocketService {
 
       case WebSocketEventType.GET_MY_ROOM_INFO:
         this.onGetMyRoomInfo(event, socket);
+        break;
+
+      case WebSocketEventType.PRODUCER_CLOSED:
+        this.onProducerClosed(event, socket);
+        break;
+
+      case WebSocketEventType.EXIT_ROOM:
+        this.onExitRoom(event, socket);
         break;
 
       default:
@@ -317,6 +329,44 @@ export class WebSocketService {
     };
 
     this.send(message, socket);
+  }
+
+  private async onDisconnect(event: WebSocketEvent, socket: WebSocket) {
+    const room = this._roomList.get(event.payload.roomId);
+    console.log("Disconnecting ", {
+      name: room?.getPeers.get(event.socketId!)?.name,
+    });
+
+    if (!room) return;
+
+    room.removePeer(event.socketId!);
+  }
+
+  private async onProducerClosed(event: WebSocketEvent, socket: WebSocket) {
+    const room = this._roomList.get(event.payload.roomId);
+    console.log(event.type);
+    const producerId = event.payload.producer_id as string;
+    if (!room) return;
+
+    room.closeProducer(event.socketId!, producerId);
+  }
+
+  private async onExitRoom(event: WebSocketEvent, socket: WebSocket) {
+    console.log(event.type);
+
+    const room = this._roomList.get(event.payload.roomId);
+
+    if (!room) {
+      console.log("NO ROOM FOUND");
+      return;
+    }
+
+    await room.removePeer(event.socketId!);
+    if (room.getPeers.size === 0) {
+      this._roomList.delete(room.id);
+    }
+
+    console.log("Exited room successfully");
   }
 
   private broadcast(roomId: string, socketId: number, message: WebSocketEvent) {
