@@ -222,7 +222,7 @@ export class RoomClient {
     try {
       let stream: MediaStream;
       if (screen) {
-        stream = await(navigator.mediaDevices as any).getDisplayMedia({
+        stream = await (navigator.mediaDevices as any).getDisplayMedia({
           video: true,
         });
       } else {

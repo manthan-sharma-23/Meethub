@@ -37,6 +37,8 @@ export class WebSocketService {
     socketId: number
   ) {
     const event = { ...message, socketId };
+    console.log(event);
+
     switch (event.type) {
       case WebSocketEventType.DISCONNECT:
         this.onDisconnect(event, socket);
@@ -207,11 +209,14 @@ export class WebSocketService {
     event: WebSocketEvent,
     socket: WebSocket
   ) {
+    console.log("Creating");
+
     console.log("Create Web Rtc Transport ", {
       name: `${
         this._roomList.get(event.payload.roomId)?.getPeers.get(event.socketId!)
           ?.name
       }`,
+      type: event.payload.type_of_transport,
     });
 
     let message: WebSocketEvent;
@@ -261,6 +266,7 @@ export class WebSocketService {
     const kind = event.payload.kind as MediaKind;
     const rtpParameters = event.payload.rtpParameters as RtpParameters;
     const producerTransportId = event.payload.producerTransportId as string;
+    console.log("produce");
 
     if (!this._roomList.has(event.payload.roomId)) return;
 
