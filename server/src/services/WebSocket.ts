@@ -122,6 +122,8 @@ export class WebSocketService {
 
   private onJoinRoom(event: WebSocketEvent, socket: WebSocket) {
     const roomId = event.payload.roomId as string;
+
+    console.log("Joined room", roomId, event.socketId);
     if (!this._roomList.has(roomId)) {
       this.send(
         {
@@ -136,6 +138,15 @@ export class WebSocketService {
     this._roomList
       .get(roomId)
       ?.addPeer(new Peer(event.socketId!, event.payload.name, socket));
+
+    const message: WebSocketEvent = {
+      type: WebSocketEventType.JOINED_ROOM_MESSAGE,
+      payload: {
+        message: `Joined room ${roomId}`,
+      },
+    };
+
+    this.send(message, socket);
   }
 
   private onGetProducers(event: WebSocketEvent, socket: WebSocket) {
@@ -213,6 +224,7 @@ export class WebSocketService {
         type: WebSocketEventType.CREATED_WEBRTC_TRANSPORT,
         payload: {
           params: webRtcTransport?.params!,
+          type_of_transport: event.payload.type_of_transport,
         },
       };
     } catch (error) {
@@ -220,6 +232,7 @@ export class WebSocketService {
         type: WebSocketEventType.ERROR,
         payload: {
           error,
+          type_of_transport: event.payload.type_of_transport,
         },
       };
     }

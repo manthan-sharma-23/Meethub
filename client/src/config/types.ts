@@ -30,3 +30,13 @@ export interface WebSocketEvent {
   payload: any;
   socketId?: number;
 }
+
+export interface RoomDetails {
+  roomId: string;
+  name: string;
+}
+export const mediaType = {
+  audio: "audioType",
+  video: "videoType",
+  screen: "screenType",
+};
