@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import http from "http";
 import { config } from "./config/config";
-import { WebSocketService } from "./services/WebSocket";
 import { Worker } from "mediasoup/node/lib/Worker";
 import * as mediasoup from "mediasoup";
 
@@ -38,7 +37,6 @@ async function createWorkers() {
 
 const httpServer = http.createServer(app);
 
-const _wss = new WebSocketService(httpServer);
 
 httpServer.listen(config.app.port, () => {
   console.log(`Server running on port ${config.app.port}`);
