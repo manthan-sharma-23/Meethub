@@ -37,7 +37,6 @@ async function createWorkers() {
 
 const httpServer = http.createServer(app);
 
-
 httpServer.listen(config.app.port, () => {
   console.log(`Server running on port ${config.app.port}`);
 });

@@ -14,13 +14,12 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "mediasoup": "^3.14.8",
-    "typescript": "^5.5.2",
-    "ws": "^8.17.1"
+    "socket.io": "^4.7.5",
+    "typescript": "^5.5.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/ws": "^8.5.10",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2"
   }
