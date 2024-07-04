@@ -96,11 +96,14 @@ export class Room {
     transport_id: string,
     dtlsParameters: DtlsParameters
   ) {
-    if (!this._peers.has(socket_id)) return;
+    console.log("DTLS", dtlsParameters);
 
-    await this._peers
-      .get(socket_id)
-      ?.connectTransport(transport_id, dtlsParameters);
+    const peer = this._peers.get(socket_id);
+    if (!peer) {
+      console.warn("No Peer Found with id");
+      return;
+    }
+    await peer.connectTransport(transport_id, dtlsParameters);
   }
 
   async produce(

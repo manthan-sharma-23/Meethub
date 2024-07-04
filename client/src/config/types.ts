@@ -1,3 +1,9 @@
+import {
+  DtlsParameters,
+  IceCandidate,
+  IceParameters,
+} from "mediasoup-client/lib/types";
+
 export enum WebSocketEventType {
   ERROR = "error",
   DISCONNECT = "disconnect",
@@ -40,3 +46,14 @@ export const mediaType = {
   video: "videoType",
   screen: "screenType",
 };
+
+export const app_config = {
+  server_port: 5000,
+};
+
+export interface webRtcTransportParams {
+  id: string;
+  iceParameters: IceParameters;
+  iceCandidates: IceCandidate[];
+  dtlsParameters: DtlsParameters;
+}

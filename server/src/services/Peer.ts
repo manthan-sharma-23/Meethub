@@ -20,9 +20,12 @@ export class Peer {
   }
 
   async connectTransport(transport_id: string, dtlsParameters: DtlsParameters) {
-    if (!this.transports.has(transport_id)) return;
-
-    await this.transports.get(transport_id)!.connect({ dtlsParameters });
+    const transport = this.transports.get(transport_id);
+    if (!transport) {
+      console.log("No transport found");
+      return;
+    }
+    await transport.connect({ dtlsParameters });
   }
 
   async createProducer(
