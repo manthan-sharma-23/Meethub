@@ -2,6 +2,8 @@ import {
   DtlsParameters,
   IceCandidate,
   IceParameters,
+  MediaKind,
+  RtpParameters,
 } from "mediasoup-client/lib/types";
 
 export enum WebSocketEventType {
@@ -56,4 +58,13 @@ export interface webRtcTransportParams {
   iceParameters: IceParameters;
   iceCandidates: IceCandidate[];
   dtlsParameters: DtlsParameters;
+}
+
+export interface ConsumerResult {
+  producerId: string;
+  id: string;
+  kind: MediaKind;
+  rtpParameters: RtpParameters;
+  type: any;
+  producerPaused: boolean;
 }
