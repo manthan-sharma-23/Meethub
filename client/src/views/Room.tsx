@@ -1,15 +1,11 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { Socket, io } from "socket.io-client";
-import {
-  WebSocketEventType,
-  app_config,
-  webRtcTransportParams,
-} from "../config/types";
+import { WebSocketEventType, webRtcTransportParams } from "../config/types";
 import { Button } from "@mui/material";
 import { RtpCapabilities } from "mediasoup-client/lib/RtpParameters";
 import { Device } from "mediasoup-client";
-import { DtlsParameters, Transport } from "mediasoup-client/lib/Transport";
+import { Transport } from "mediasoup-client/lib/Transport";
 import { Producer } from "mediasoup-client/lib/Producer";
 
 const Room = () => {
@@ -18,9 +14,11 @@ const Room = () => {
   // Reference States
   const socketState = useRef<Socket | null>(null);
   const deviceRef = useRef<Device | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
   const producerTransportRef = useRef<Transport | null>(null);
   const videoProducer = useRef<Producer | null>(null);
+
+  // video references
+  const localVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const socket = io("http://localhost:5000");
@@ -36,6 +34,7 @@ const Room = () => {
     };
   }, [roomId, name]);
 
+  // Create or join a socket room
   const createRoom = () => {
     if (socketState.current) {
       socketState.current.emit(
@@ -59,6 +58,7 @@ const Room = () => {
     }
   };
 
+  // turn on the video cam functionality
   const turnOnVideoCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -71,7 +71,7 @@ const Room = () => {
     }
   };
 
-  const getRouterRtpCapabilities = useCallback(() => {
+  const getRouterRtpCapabilities = () => {
     if (socketState.current) {
       socketState.current.emit(
         WebSocketEventType.GET_ROUTER_RTP_CAPABILITIES,
@@ -81,7 +81,7 @@ const Room = () => {
         }
       );
     }
-  }, [socketState, roomId, name]);
+  };
 
   const loadDevice = async (rtp: RtpCapabilities) => {
     try {
@@ -180,17 +180,13 @@ const Room = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-
       // Extract the video track from the media stream
       const videoTrack = stream.getVideoTracks()[0];
-
       const producer = await producerTransportRef.current.produce({
         track: videoTrack,
       });
-
       videoProducer.current = producer;
-
-      console.log("--- Producer : ", producer);
+      console.log("--- Producer --- ", producer);
     } catch (error) {
       console.error("Error in producer:", error);
     }

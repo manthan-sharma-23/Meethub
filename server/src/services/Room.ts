@@ -1,6 +1,7 @@
 import {
   MediaKind,
   Router,
+  RtpCapabilities,
   RtpParameters,
   Worker,
 } from "mediasoup/node/lib/types";
@@ -51,6 +52,12 @@ export class Room {
     const { maxIncomingBitrate, initialAvailableOutgoingBitrate, listenIps } =
       config.mediasoup.webRtcTransport;
 
+    const peer = this.getPeer(socket_id);
+    if (!peer) {
+      console.log("No Peer found to add transport to");
+      return;
+    }
+
     const transport = await this.router!.createWebRtcTransport({
       listenIps,
       enableUdp: true,
@@ -67,20 +74,21 @@ export class Room {
     transport.on("dtlsstatechange", (state) => {
       if (state === "closed") {
         console.log("Transport Closed ", {
-          name: this._peers.get(socket_id)?.name,
+          name: peer.name,
         });
       }
     });
 
     transport.on("@close", () => {
       console.log("Transport Closed ", {
-        name: this._peers.get(socket_id)?.name,
+        name: peer.name,
       });
     });
 
     console.log("Adding Transport ", { transport_id: transport.id });
 
-    this._peers.get(socket_id)?.addTransport(transport);
+    peer.addTransport(transport);
+
     return {
       params: {
         id: transport.id,
@@ -130,9 +138,37 @@ export class Room {
     });
   }
 
+  async consume(
+    socket_id: string,
+    consumer_transport_id: string,
+    producer_id: string,
+    rtpCapabilities: RtpCapabilities
+  ) {
+    const routerCanConsume = this.router?.canConsume({
+      producerId: producer_id,
+      rtpCapabilities,
+    });
+    if (!routerCanConsume) {
+      console.warn("Router cannot consume the given producer");
+      return;
+    }
+
+    const peer = this._peers.get(socket_id);
+
+    if (!peer) {
+      console.warn("No Peer found with the given Id");
+      return;
+    }
+  }
+
   addPeer(peer: Peer) {
     this._peers.set(peer.id, peer);
   }
+
+  getPeer(socketId: string) {
+    return this._peers.get(socketId);
+  }
+
   getPeers() {
     return this._peers;
   }

@@ -170,6 +170,17 @@ export class SocketService {
           cb({ producer_id });
         }
       );
+
+      socket.on(WebSocketEventType.CONSUME, () => {
+        const room = this._roomList.get(socket.roomId!);
+
+        if (!room) {
+          console.warn("No room associated with the id ");
+          return;
+        }
+
+
+      });
     });
   }
 
