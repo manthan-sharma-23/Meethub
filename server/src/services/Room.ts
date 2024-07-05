@@ -9,6 +9,7 @@ import * as io from "socket.io";
 import { Peer } from "./Peer";
 import { config } from "../config/config";
 import { DtlsParameters } from "mediasoup/node/lib/fbs/web-rtc-transport";
+import { WebSocketEventType } from "../config/types";
 
 export class Room {
   id: string;
@@ -159,6 +160,34 @@ export class Room {
       console.warn("No Peer found with the given Id");
       return;
     }
+
+    const consumer_created = await peer.createConsumer(
+      consumer_transport_id,
+      producer_id,
+      rtpCapabilities
+    );
+
+    if (!consumer_created) {
+      console.log("Couldn't create consumer");
+      return;
+    }
+
+    const { consumer, params } = consumer_created;
+
+    consumer.on("producerclose", () => {
+      console.log("Consumer closed due to close event in producer id", {
+        name: peer.name,
+        consumer_id: consumer.id,
+      });
+
+      peer.removeConsumer(consumer.id);
+
+      this.io.to(socket_id).emit(WebSocketEventType.CONSUMER_CLOSED, {
+        consumer_id: consumer.id,
+      });
+    });
+
+    return params;
   }
 
   addPeer(peer: Peer) {

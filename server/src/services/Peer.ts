@@ -113,4 +113,26 @@ export class Peer {
       },
     };
   }
+
+  removeConsumer(consumerId: string) {
+    this.consumers.delete(consumerId);
+  }
+
+  closeProducer(producer_id: string) {
+    try {
+      this.producers.get(producer_id)!.close();
+    } catch (e) {
+      console.warn(e);
+    }
+
+    this.producers.delete(producer_id);
+  }
+
+  getProducer(producer_id: string) {
+    return this.producers.get(producer_id);
+  }
+
+  close() {
+    this.transports.forEach((transport) => transport.close());
+  }
 }

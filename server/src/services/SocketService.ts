@@ -171,16 +171,35 @@ export class SocketService {
         }
       );
 
-      socket.on(WebSocketEventType.CONSUME, () => {
-        const room = this._roomList.get(socket.roomId!);
+      socket.on(
+        WebSocketEventType.CONSUME,
+        async (
+          { consumerTransportId, producerId, rtpCapabilities },
+          cb: CreateSocketCallback
+        ) => {
+          const room = this._roomList.get(socket.roomId!);
 
-        if (!room) {
-          console.warn("No room associated with the id ");
-          return;
+          if (!room) {
+            console.warn("No room associated with the id ");
+            return;
+          }
+
+          const params = await room.consume(
+            socket.id,
+            consumerTransportId,
+            producerId,
+            rtpCapabilities
+          );
+
+          if (!params) {
+            console.log("Consumer params couldn't be passed");
+
+            return;
+          }
+
+          cb(params);
         }
-
-
-      });
+      );
     });
   }
 
