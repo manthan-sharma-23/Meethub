@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Socket, io } from "socket.io-client";
 import {
@@ -37,13 +37,12 @@ const Room = () => {
 
     socket.on("connect", () => {
       socketState.current = socket;
-      createRoom();
-      joinRoom();
+      loadeVerything();
     });
 
     socket.on(
       WebSocketEventType.NEW_PRODUCERS,
-      (data: { producer_id: string; producer_socket_id: string }[]) => {
+      (data: { producer_id: string }[]) => {
         if (!data) {
           console.log("No new producers");
           return;
@@ -60,28 +59,21 @@ const Room = () => {
     };
   }, [roomId, name]);
 
-  // Create or join a socket room
-  const createRoom = () => {
-    if (socketState.current) {
-      socketState.current.emit(
-        WebSocketEventType.CREATE_ROOM,
-        { _roomId: roomId },
-        (resp: any) => {
-          console.log(resp);
-        }
-      );
-    }
+  const loadeVerything = async () => {
+    await createRoom();
+    await joinRoom();
+
+    await getRouterRtpCapabilities();
+
+    await createConsumerTransport();
   };
-  const joinRoom = () => {
-    if (socketState.current) {
-      socketState.current.emit(
-        WebSocketEventType.JOIN_ROOM,
-        { _roomId: roomId, name },
-        (resp: any) => {
-          console.log(resp);
-        }
-      );
-    }
+
+  // Create or join a socket room
+  const createRoom = async () => {
+    await sendRequest(WebSocketEventType.CREATE_ROOM, { _roomId: roomId });
+  };
+  const joinRoom = async () => {
+    await sendRequest(WebSocketEventType.JOIN_ROOM, { _roomId: roomId, name });
   };
 
   // turn on the video cam functionality
@@ -92,21 +84,20 @@ const Room = () => {
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
+
+      await createProduceTransport();
+      produce();
     } catch (error) {
       console.log(error);
     }
   };
 
-  const getRouterRtpCapabilities = () => {
-    if (socketState.current) {
-      socketState.current.emit(
-        WebSocketEventType.GET_ROUTER_RTP_CAPABILITIES,
-        {},
-        (resp: RtpCapabilities) => {
-          loadDevice(resp);
-        }
-      );
-    }
+  const getRouterRtpCapabilities = async () => {
+    const rtp = (await sendRequest(
+      WebSocketEventType.GET_ROUTER_RTP_CAPABILITIES,
+      {}
+    )) as RtpCapabilities;
+    await loadDevice(rtp);
   };
 
   const loadDevice = async (rtp: RtpCapabilities) => {
@@ -175,6 +166,8 @@ const Room = () => {
           producerTransportRef.current.on("connectionstatechange", (state) => {
             console.log(state);
           });
+
+          return true;
         } catch (error) {
           console.log(error);
         }
@@ -261,6 +254,17 @@ const Room = () => {
       });
 
       console.log("--- Connected Consumer Transport ---");
+
+      const producers = (await sendRequest(
+        WebSocketEventType.GET_PRODUCERS,
+        {}
+      )) as { producer_id: string }[];
+
+      producers.forEach((producer) => {
+        console.log("Remote producer: ", producer);
+
+        consume(producer.producer_id);
+      });
     } catch (error) {
       console.error("Consume Function Error Client :: ", error);
       return;
@@ -338,24 +342,11 @@ const Room = () => {
             Turn On Audio
           </Button>
         </div>
-        <Button onClick={getRouterRtpCapabilities} variant="contained">
-          Get Router RTP Capabilities
-        </Button>
-        <Button onClick={createProduceTransport} variant="contained" fullWidth>
-          Create Produce Transport
-        </Button>
-
-        <Button variant="contained" onClick={produce}>
-          Produce Media
-        </Button>
-        <Button variant="contained" onClick={createConsumerTransport}>
-          Consume Media
-        </Button>
       </div>
-      <div className="w-1/2 h-full flex felx-col gap-3 border-3 border-red-500">
+      <div className="w-1/2 h-full flex flex-wrap ml-3 gap-3 border-3 border-red-500">
         {videoStreams &&
           videoStreams.map(({ stream }, index) => (
-            <RemoteVideo stream={stream} key={index} />
+            <MemoizedRemoteStream stream={stream} key={index} />
           ))}
       </div>
     </div>
@@ -368,6 +359,9 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
+      videoRef.current.play();
+      videoRef.current.volume = 0;
+      videoRef.current.autoplay = true;
     }
   }, [stream]);
 
@@ -376,9 +370,11 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
       ref={videoRef}
       autoPlay
       playsInline
-      className="h-1/2 w-full border-2"
+      className="h-1/4 w-auto border-2"
     />
   );
 };
+
+const MemoizedRemoteStream = memo(RemoteVideo);
 
 export default Room;

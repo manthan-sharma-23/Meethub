@@ -65,22 +65,34 @@ export class SocketService {
           }
           this._roomList.get(_roomId)!.addPeer(new Peer(name, socket.id));
           socket.roomId = _roomId;
+
+          cb({
+            name,
+            _roomId,
+          });
         }
       );
 
-      socket.on(WebSocketEventType.GET_PRODUCERS, () => {
-        if (!this._roomList.has(socket.roomId!)) return;
+      socket.on(
+        WebSocketEventType.GET_PRODUCERS,
+        (_, cb: CreateSocketCallback) => {
+          if (!this._roomList.has(socket.roomId!)) return;
 
-        const room = this._roomList.get(socket.roomId!)!;
+          const room = this._roomList.get(socket.roomId!)!;
 
-        this.name_logger(WebSocketEventType.GET_PRODUCERS, socket);
+          if (!room) {
+            console.log("No room found for producers");
+            cb({ error: "Room Not Found" });
+            return;
+          }
 
-        let producerList = this._roomList
-          .get(socket.roomId!)!
-          .getProducerListForPeer();
+          this.name_logger(WebSocketEventType.GET_PRODUCERS, socket);
 
-        socket.emit(WebSocketEventType.NEW_PRODUCERS, producerList);
-      });
+          let producerList = room.getProducerListForPeer();
+
+          cb(producerList);
+        }
+      );
 
       socket.on(
         WebSocketEventType.GET_ROUTER_RTP_CAPABILITIES,
