@@ -1,14 +1,14 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Home from "./views/Home";
-import Room from "./views/Room";
+import HomeIndex from "./views/home/Index";
+import RoomIndex from "./views/conference";
 
 const App = () => {
   return (
     <div>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/r/:roomId/u/:name" element={<Room />} />
+          <Route path="/" element={<HomeIndex />} />
+          <Route path="/r/:roomId/u/:name" element={<RoomIndex />} />
         </Routes>
       </BrowserRouter>
     </div>
