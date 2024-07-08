@@ -23,6 +23,10 @@ const getLocalIp = () => {
 export const config = {
   app: {
     port: 5000,
+    redis: {
+      port: 8200,
+      channel: "channel",
+    },
   },
   mediasoup: {
     // Worker settings

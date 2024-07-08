@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BsPeopleFill } from "react-icons/bs";
 import { FaVideo } from "react-icons/fa";
 import { FaVideoSlash } from "react-icons/fa6";
 import { PiChatsTeardropDuotone, PiTelevisionSimple } from "react-icons/pi";
 import { TbMicrophoneFilled, TbMicrophoneOff } from "react-icons/tb";
 import { useParams } from "react-router-dom";
+import { io, Socket } from "socket.io-client";
 import { twMerge } from "tailwind-merge";
+import { config } from "../../config/config";
 
 const RoomIndex = () => {
   const { roomId, name } = useParams();
@@ -14,6 +16,24 @@ const RoomIndex = () => {
   const [IsWhiteBoardActive, setIsWhiteBoardActive] = useState(false);
   const [IsChatActive, setIsChatActive] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
+
+  //references
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    const socket = io(config.ws.url);
+    socket.on("connect", () => {
+      socketRef.current = socket;
+      socket.emit("change", { new: "new" });
+      socket.on("message", (msg) => {
+        console.log(msg);
+      });
+    });
+  }, []);
+
+  const loadEverything = () => {};
+
+  const createRoom = () => {};
 
   return (
     <div className="h-screen w-screen bg-dark flex flex-col overflow-hidden text-white p-0">
