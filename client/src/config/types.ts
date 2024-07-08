@@ -11,6 +11,8 @@ export enum WebSocketEventType {
   DISCONNECT = "disconnect",
   EXIT_ROOM = "exitRoom",
 
+  CLOSE_PRODUCER = "closeProducer",
+
   // server side
   CREATE_ROOM = "createRoom",
   JOIN_ROOM = "joinRoom",

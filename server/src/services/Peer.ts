@@ -7,6 +7,8 @@ import {
   RtpParameters,
   Transport,
 } from "mediasoup/node/lib/types";
+import * as io from "socket.io";
+import { WebSocketEventType } from "../config/types";
 
 export class Peer {
   name: string;
@@ -14,13 +16,15 @@ export class Peer {
   transports: Map<string, Transport>;
   producers: Map<string, Producer>;
   consumers: Map<string, Consumer>;
+  io: io.Server;
 
-  constructor(name: string, id: string) {
+  constructor(name: string, id: string, io: io.Server) {
     this.name = name;
     this.id = id;
     this.producers = new Map();
     this.transports = new Map();
     this.consumers = new Map();
+    this.io = io;
   }
 
   addTransport(transport: Transport) {
@@ -55,6 +59,11 @@ export class Peer {
       });
       producer.close();
       this.producers.delete(producer.id);
+      console.log("EMitting producerCLosed ");
+
+      this.io.emit(WebSocketEventType.PRODUCER_CLOSED, {
+        producer_id: producer.id,
+      });
     });
 
     return producer;
@@ -119,6 +128,8 @@ export class Peer {
   }
 
   closeProducer(producer_id: string) {
+    console.log(this.producers);
+
     try {
       this.producers.get(producer_id)!.close();
     } catch (e) {
@@ -126,6 +137,8 @@ export class Peer {
     }
 
     this.producers.delete(producer_id);
+
+    this.io.emit(WebSocketEventType.PRODUCER_CLOSED, { producer_id });
   }
 
   getProducer(producer_id: string) {

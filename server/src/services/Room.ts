@@ -36,6 +36,10 @@ export class Room {
     return this.router!.rtpCapabilities;
   }
 
+  removePeer = (socketId: string) => {
+    this._peers.delete(socketId);
+  };
+
   getProducerListForPeer() {
     let producerList: { producer_id: string }[] = [];
     this._peers.forEach((peer) => {

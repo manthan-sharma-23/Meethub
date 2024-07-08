@@ -23,14 +23,22 @@ const Room = () => {
   const consumerTransportRef = useRef<Transport | null>(null);
   const videoProducer = useRef<Producer | null>(null);
   const consumers = useRef<Map<string, Consumer>>(new Map());
+  const producerIds = useRef<string[]>([]);
 
   // video references
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   // Remote videos
   const [videoStreams, setVideoStreams] = useState<
-    { consumer: Consumer; stream: MediaStream; kind: MediaKind }[]
+    {
+      consumer: Consumer;
+      stream: MediaStream;
+      kind: MediaKind;
+      producerId: string;
+    }[]
   >([]);
+  const [isVideoOn, SetVideoOn] = useState(false);
+  const [isAudioOn, setAudioOn] = useState(false);
 
   useEffect(() => {
     const socket = io("http://localhost:5000");
@@ -54,8 +62,22 @@ const Room = () => {
       }
     );
 
+    socket.on(WebSocketEventType.PRODUCER_CLOSED, ({ producer_id }) => {
+      setVideoStreams((v) =>
+        v.filter((stream) => {
+          console.log(stream.producerId, producer_id);
+
+          return stream.producerId !== producer_id;
+        })
+      );
+    });
+
+    window.addEventListener("beforeunload", async (ev) => {
+      await unloadverything();
+    });
+
     return () => {
-      socket.disconnect();
+      unloadverything();
     };
   }, [roomId, name]);
 
@@ -66,6 +88,19 @@ const Room = () => {
     await getRouterRtpCapabilities();
 
     await createConsumerTransport();
+  };
+
+  const unloadverything = async () => {
+    // await sendRequest(WebSocketEventType.)
+    producerIds.current.forEach(async (producerId) => {
+      await sendRequest(WebSocketEventType.CLOSE_PRODUCER, {
+        producer_id: producerId,
+      });
+    });
+    producerTransportRef.current?.close();
+    consumerTransportRef.current?.close();
+    consumers.current.clear();
+    socketState.current?.disconnect();
   };
 
   // Create or join a socket room
@@ -156,6 +191,8 @@ const Room = () => {
                   }
                 )) as { producer_id: string };
 
+                console.log(producer_id);
+
                 cb({ id: producer_id });
               } catch (error) {
                 eb(new Error(String(error)));
@@ -165,11 +202,16 @@ const Room = () => {
 
           producerTransportRef.current.on("connectionstatechange", (state) => {
             console.log(state);
+            switch (state) {
+              case "disconnected":
+                console.log("Producer disconnected");
+                break;
+            }
           });
 
           return true;
         } catch (error) {
-          console.log(error);
+          console.log("Producer creation error", error);
         }
       }
     }
@@ -205,6 +247,8 @@ const Room = () => {
         track: videoTrack,
       });
       videoProducer.current = producer;
+
+      producerIds.current.push(producer.id);
       console.log("--- Producer --- ", producer);
     } catch (error) {
       console.error("Error in producer:", error);
@@ -318,8 +362,14 @@ const Room = () => {
       consumer,
       stream,
       kind,
+      producerId,
     };
   };
+
+  console.log("Video streams", videoStreams);
+  producerTransportRef.current?.getStats().then((stat) => {
+    console.log("Producer Transport ", stat);
+  });
 
   return (
     <div className="h-screen w-screen p-3 flex justify-center items-center">
@@ -330,6 +380,7 @@ const Room = () => {
           playsInline
           className="h-1/2 w-full border-2"
         ></video>
+        <p>{producerTransportRef.current?.id}</p>
         <div className="h-auto w-full flex justify-center items-center gap-3">
           <Button
             onClick={turnOnVideoCamera}
@@ -344,34 +395,72 @@ const Room = () => {
         </div>
       </div>
       <div className="w-1/2 h-full flex flex-wrap ml-3 gap-3 border-3 border-red-500">
-        {videoStreams &&
-          videoStreams.map(({ stream }, index) => (
-            <MemoizedRemoteStream stream={stream} key={index} />
-          ))}
+        <MemoOfRemoteStreams remoteStreams={videoStreams} />
       </div>
     </div>
   );
 };
 
-const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
+const RemoteStreams = ({
+  remoteStreams,
+}: {
+  remoteStreams: {
+    consumer: Consumer;
+    stream: MediaStream;
+    kind: MediaKind;
+    producerId: string;
+  }[];
+}) => {
+  return (
+    remoteStreams &&
+    remoteStreams.map((stream, index) => {
+      return (
+        <MemoizedRemoteStream
+          stream={stream.stream}
+          producerId={stream.producerId}
+          key={index}
+        />
+      );
+    })
+  );
+};
+const MemoOfRemoteStreams = memo(RemoteStreams);
+
+const RemoteVideo = ({
+  stream,
+  producerId,
+}: {
+  stream: MediaStream;
+  producerId: string;
+}) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
+    if (!stream) {
+      console.log("No stream here ", producerId);
+    }
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play();
-      videoRef.current.volume = 0;
-      videoRef.current.autoplay = true;
+      videoRef.current!.volume = 0;
+      videoRef.current!.autoplay = true;
     }
-  }, [stream]);
+  }, []);
+
+  if (!stream) {
+    return;
+  }
 
   return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      className="h-1/4 w-auto border-2"
-    />
+    <div>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        className="h-1/4 w-auto border-2"
+      />
+      <p>{producerId}</p>
+    </div>
   );
 };
 

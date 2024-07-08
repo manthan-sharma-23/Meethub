@@ -31,6 +31,14 @@ export class SocketService {
     io.on("connection", (socket) => {
       console.log("user connected");
 
+      socket.on(WebSocketEventType.DISCONNECT, () => {
+        console.log("Disconnecting....", socket.id);
+        const room = this._roomList.get(socket.roomId!);
+        if (room) {
+          room?.removePeer(socket.id);
+        }
+      });
+
       // Create a room
       socket.on(
         WebSocketEventType.CREATE_ROOM,
@@ -63,13 +71,25 @@ export class SocketService {
               error: "Room Doesn't Exists",
             });
           }
-          this._roomList.get(_roomId)!.addPeer(new Peer(name, socket.id));
+          this._roomList.get(_roomId)!.addPeer(new Peer(name, socket.id, io));
           socket.roomId = _roomId;
 
           cb({
             name,
             _roomId,
           });
+        }
+      );
+
+      socket.on(
+        WebSocketEventType.CLOSE_PRODUCER,
+        ({ producer_id }, cb: CreateSocketCallback) => {
+          const room = this._roomList.get(socket.roomId!)!;
+          console.log(WebSocketEventType.CLOSE_PRODUCER, producer_id);
+
+          if (room) {
+            room._peers.get(socket.id)?.closeProducer(producer_id);
+          }
         }
       );
 
