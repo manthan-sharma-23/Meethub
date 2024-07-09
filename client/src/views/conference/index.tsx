@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+// styles
+import "../../styles/chat_scrollBar.css";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BsPeopleFill } from "react-icons/bs";
 import { FaVideo } from "react-icons/fa";
 import { FaVideoSlash } from "react-icons/fa6";
@@ -12,6 +15,7 @@ import {
   config,
   Peer,
   sortAndBundleMessages,
+  webRtcTransportParams,
   WebSocketEventType,
 } from "../../config/config";
 import Avvvatars from "avvvatars-react";
@@ -20,11 +24,9 @@ import { Dialog } from "@mui/material";
 import { RxCross2 } from "react-icons/rx";
 import { get_messages_chats_fromRedis } from "../../features/server_calls/get_message_redis";
 import { post_message_toRedis } from "../../features/server_calls/post_message_redis";
-
-// styles
-import "../../styles/chat_scrollBar.css";
 import { RtpCapabilities } from "mediasoup-client/lib/RtpParameters";
 import { Device } from "mediasoup-client";
+import { Transport } from "mediasoup-client/lib/types";
 
 const RoomIndex = () => {
   const { roomId, name } = useParams();
@@ -40,6 +42,7 @@ const RoomIndex = () => {
   //references
   const socketRef = useRef<Socket | null>(null);
   const DeviceRef = useRef<Device | null>(null);
+  const ProducerRef = useRef<Transport | null>(null);
 
   useEffect(() => {
     const socket = io(config.ws.url);
@@ -63,6 +66,12 @@ const RoomIndex = () => {
   useEffect(() => {
     getChatsFromServer();
   }, [name, roomId, IsChatActive]);
+
+  useEffect(() => {
+    if (IsVideoOn || IsMicOn) {
+      produce();
+    }
+  }, [IsVideoOn, IsMicOn]);
 
   const getChatsFromServer = async () => {
     const data = await get_messages_chats_fromRedis(roomId!);
@@ -127,6 +136,7 @@ const RoomIndex = () => {
     await joinRoom();
     await getCurrentUsers();
     await getRouterRTPCapabilties();
+    await createProducerTransport();
   };
 
   const createRoom = async () => {
@@ -157,6 +167,7 @@ const RoomIndex = () => {
       return;
     }
     await loadDevice(rtp);
+    return;
   };
 
   const loadDevice = async (rtp: RtpCapabilities) => {
@@ -166,12 +177,112 @@ const RoomIndex = () => {
       DeviceRef.current = device;
       console.log("--- Device Loaded successfully with RTP capabilities ---");
       console.log(rtp);
+      return;
     } else {
       console.error(
         "Couldn't load device. check socket or theres current active device"
       );
+
+      return;
     }
   };
+
+  const createProducerTransport = async () => {
+    if (DeviceRef.current && socketRef.current) {
+      console.log("resp");
+
+      const resp = (await sendRequest(
+        WebSocketEventType.CREATE_WEBRTC_TRANSPORT,
+        {
+          forceTcp: false,
+          rtpCapabilities: DeviceRef.current.rtpCapabilities,
+        }
+      )) as { params: webRtcTransportParams };
+      console.log(resp);
+
+      ProducerRef.current = DeviceRef.current.createSendTransport(resp.params);
+
+      console.log("--- CREATE PRODUCER TRANSPORT ---");
+
+      if (ProducerRef.current) {
+        try {
+          ProducerRef.current.on("connect", ({ dtlsParameters }, cb, eb) => {
+            sendRequest(WebSocketEventType.CONNECT_TRANSPORT, {
+              transport_id: ProducerRef.current!.id,
+              dtlsParameters,
+            })
+              .then(cb)
+              .catch(eb);
+          });
+
+          ProducerRef.current.on(
+            "produce",
+            async ({ kind, rtpParameters }, cb, eb) => {
+              try {
+                const { producer_id } = (await sendRequest(
+                  WebSocketEventType.PRODUCE,
+                  {
+                    producerTransportId: ProducerRef.current!.id,
+                    kind,
+                    rtpParameters,
+                  }
+                )) as { producer_id: string };
+
+                console.log(producer_id);
+
+                cb({ id: producer_id });
+              } catch (error) {
+                console.log(error);
+
+                eb(new Error(String(error)));
+              }
+            }
+          );
+
+          ProducerRef.current.on("connectionstatechange", (state) => {
+            console.log(state);
+            switch (state) {
+              case "disconnected":
+                console.log("Producer disconnected");
+                break;
+            }
+          });
+
+          return true;
+        } catch (error) {
+          console.log("Producer Creation error :: ", error);
+        }
+      }
+    }
+  };
+
+  const produce = useCallback(async () => {
+    if (!ProducerRef.current) {
+      console.log("Producer transport not initialized");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: IsVideoOn,
+        audio: IsMicOn,
+      });
+
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+
+      if (IsVideoOn) {
+        await ProducerRef.current.produce({ track: videoTrack });
+      }
+
+      if (IsMicOn) {
+        await ProducerRef.current.produce({ track: audioTrack });
+      }
+    } catch (error) {
+      console.error("Error in producing media", error);
+      return;
+    }
+  }, [IsVideoOn, IsMicOn]);
 
   function sendRequest(type: WebSocketEventType, data: any) {
     return new Promise((resolve, reject) => {

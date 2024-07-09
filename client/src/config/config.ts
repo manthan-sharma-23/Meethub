@@ -1,3 +1,5 @@
+import { DtlsParameters, IceCandidate, IceParameters } from "mediasoup-client/lib/types";
+
 export const config = {
   ws: {
     url: "ws://localhost:5000",
@@ -59,6 +61,13 @@ export interface ChatMessage {
   user: Peer;
   data: string;
   createdAt: Date;
+}
+
+export interface webRtcTransportParams {
+  id: string;
+  iceParameters: IceParameters;
+  iceCandidates: IceCandidate[];
+  dtlsParameters: DtlsParameters;
 }
 
 export interface BundledMessages {

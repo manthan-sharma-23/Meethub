@@ -171,7 +171,7 @@ export class SocketService {
       );
 
       socket.on(
-        WebSocketEventType.CREATED_WEBRTC_TRANSPORT,
+        WebSocketEventType.CREATE_WEBRTC_TRANSPORT,
         async (_, cb: SocketCallback) => {
           const room = this._roomList.get(socket.roomId!);
           if (!room) {
@@ -206,6 +206,8 @@ export class SocketService {
             transport_id,
             dtlsParameters
           );
+
+          cb("SUCCESS");
         }
       );
 
@@ -215,6 +217,8 @@ export class SocketService {
           { kind, rtpParameters, producerTransportId },
           cb: SocketCallback
         ) => {
+          console.log("IN PRODUCE EVENT");
+
           const room = this._roomList.get(socket.roomId!);
 
           if (!room) {
