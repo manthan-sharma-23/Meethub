@@ -9,7 +9,7 @@ interface SocketCallback {
   (response: any): void;
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   user: Peer;
   data: string;
   createdAt: Date;

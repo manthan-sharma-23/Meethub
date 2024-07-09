@@ -2,6 +2,9 @@ export const config = {
   ws: {
     url: "ws://localhost:5000",
   },
+  server: {
+    url: "http://localhost:5000",
+  },
 };
 export enum WebSocketEventType {
   // ROOM EVENTS
@@ -54,7 +57,7 @@ export interface Peer {
 
 export interface ChatMessage {
   user: Peer;
-  data: string ;
+  data: string;
   createdAt: Date;
 }
 
@@ -66,7 +69,12 @@ export function sortAndBundleMessages(
   messages: ChatMessage[]
 ): BundledMessages[] {
   // Step 1: Sort messages by createdAt date in ascending order
-  messages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  messages.sort((a, b) => {
+    const a_time = new Date(a.createdAt).getTime();
+    const b_time = new Date(b.createdAt).getTime();
+
+    return a_time - b_time;
+  });
 
   // Step 2: Bundle consecutive messages by user
   const bundledMessages: BundledMessages[] = [];

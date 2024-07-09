@@ -13,8 +13,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "ioredis": "^5.4.1",
     "mediasoup": "^3.14.8",
-    "redis": "^4.6.15",
     "socket.io": "^4.7.5",
     "typescript": "^5.5.2"
   },

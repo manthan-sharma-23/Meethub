@@ -26,6 +26,7 @@ export const config = {
     redis: {
       port: 8200,
       channel: "channel",
+      url: "redis://localhost:8200/",
     },
   },
   mediasoup: {

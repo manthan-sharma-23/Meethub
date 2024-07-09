@@ -22,6 +22,8 @@ import { RxCross2 } from "react-icons/rx";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import "../../styles/chat_scrollBar.css";
+import { get_messages_chats_fromRedis } from "../../features/server_calls/get_message_redis";
+import { post_message_toRedis } from "../../features/server_calls/post_message_redis";
 
 const RoomIndex = () => {
   const { roomId, name } = useParams();
@@ -56,6 +58,20 @@ const RoomIndex = () => {
     };
   }, [name, roomId]);
 
+  useEffect(() => {
+    getChatsFromServer();
+  }, [name, roomId, IsChatActive]);
+
+  const getChatsFromServer = async () => {
+    const data = await get_messages_chats_fromRedis(roomId!);
+    console.log(data);
+
+    if (data?.chats) {
+      setRoomChat(data.chats);
+    } else {
+      setRoomChat([]);
+    }
+  };
   const routeIncommingEvents = ({
     event,
     args,
@@ -145,9 +161,10 @@ const RoomIndex = () => {
   }
 
   const sendRoomChat = (msg: ChatMessage) => {
-    if (msg.data) {
+    if (msg.data && roomId) {
       sendRequest(WebSocketEventType.USER_CHAT, msg);
       setRoomChatValue(null);
+      post_message_toRedis(msg, roomId);
     }
   };
 
@@ -217,7 +234,7 @@ const RoomIndex = () => {
               </p>
             </div>
             <div className="h-[90%] w-full px-7 flex flex-col items-center justify-center">
-              <div className="h-[93%] w-full ">
+              <div className="h-[93%] w-full py-2">
                 {roomChat && (
                   <RoomChat
                     roomChat={roomChat}
@@ -235,9 +252,9 @@ const RoomIndex = () => {
                         createdAt: new Date(),
                       };
                       if (message.data !== null) {
-                        // @ts-ignore
+                        //@ts-ignore
                         setRoomChat((v) => [...v, message]);
-                        // @ts-ignore
+                        //@ts-ignore
                         sendRoomChat(message);
                       }
                     }
@@ -283,15 +300,37 @@ const RoomChat = ({
   roomChat: ChatMessage[];
   userId: string;
 }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bundledChat = sortAndBundleMessages(roomChat);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [roomChat]);
   return (
-    <div className="h-full w-full  flex flex-col overflow-y-scroll overflow-x-hidden chatScrollBar">
+    <div
+      ref={scrollRef}
+      className="h-full w-full  flex flex-col overflow-y-scroll overflow-x-hidden chatScrollBar "
+    >
       {bundledChat &&
-        bundledChat.map((bundle) => (
-          <div className="flex flex-col gap-2 items-start justify-center mb-3">
+        bundledChat.map((bundle, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-2 items-start justify-center mb-3"
+          >
             <div className=" flex justify-start items-center gap-2">
               <Avvvatars value={bundle.user.name} size={22} />
-              <p>{bundle.user.id === userId ? "You" : bundle.user.name}</p>
+              <div className="flex flex-col justify-center items-start">
+                <p>{bundle.user.id === userId ? "You" : bundle.user.name}</p>{" "}
+                <p className="text-[9px] text-white/60 h-full  flex items-center justify-end">
+                  {moment(bundle.messages[0].createdAt).format("LT")}
+                </p>
+              </div>
             </div>
 
             <div className="flex w-full flex-col ml-3">
@@ -304,9 +343,6 @@ const RoomChat = ({
                 >
                   <div className="bg-black/60 text-white w-auto inline-block pl-1 pr-4 rounded-md font-sans">
                     <p className="text-[1rem]">{chat.data}</p>
-                    <p className="text-[10px] text-white/60">
-                      {moment(chat.createdAt).format("LT")}
-                    </p>
                   </div>
                 </div>
               ))}

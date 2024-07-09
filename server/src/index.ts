@@ -5,9 +5,12 @@ import { config } from "./config/config";
 import { Worker } from "mediasoup/node/lib/Worker";
 import * as mediasoup from "mediasoup";
 import { SocketService } from "./services/SocketService";
+import ChatRouter from "./api/chat.api";
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+app.use("/api", ChatRouter);
 
 let workers: Worker[] = [];
 export let nextMediasoupWorkerIdx = 0;
