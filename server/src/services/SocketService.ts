@@ -4,6 +4,9 @@ import { config } from "../config/config";
 import { WebSocketEventType } from "../config/types";
 import Room from "./Room";
 import Peer from "./Peer";
+import { getMediasoupWorker } from "..";
+import { logger } from "../helpers/logger";
+import { DtlsParameters } from "mediasoup/node/lib/fbs/web-rtc-transport";
 
 interface SocketCallback {
   (response: any): void;
@@ -51,7 +54,8 @@ export class SocketService {
             cb({ error: "Room already present" });
             return;
           } else {
-            this._roomList.set(roomId, new Room(roomId, io));
+            const worker = getMediasoupWorker();
+            this._roomList.set(roomId, new Room(roomId, io, worker));
             console.log("Room created successfully ", { roomId });
             cb({ message: "Room created successfully" });
           }
@@ -126,7 +130,115 @@ export class SocketService {
 
       socket.on(WebSocketEventType.USER_CHAT, (msg) => {
         socket.to(socket.roomId!).emit(WebSocketEventType.USER_CHAT, msg);
+        return;
       });
+
+      socket.on(WebSocketEventType.GET_PRODUCERS, (_, cb: SocketCallback) => {
+        const room = this._roomList.get(socket.roomId!);
+
+        if (!room) {
+          logger("ERROR", "Couldn't find room");
+          cb({ error: "No Room Found" });
+          return;
+        }
+
+        logger(WebSocketEventType.GET_PRODUCERS, room._peers.get(socket.id));
+
+        let producerList = room.getProducerListForPeer();
+
+        cb(producerList);
+        return;
+      });
+
+      socket.on(
+        WebSocketEventType.GET_ROUTER_RTP_CAPABILITIES,
+        (_, cb: SocketCallback) => {
+          const room = this._roomList.get(socket.roomId!);
+          logger(
+            WebSocketEventType.GET_ROUTER_RTP_CAPABILITIES,
+            room?._peers.get(socket.id)
+          );
+          if (!room) {
+            logger("ERROR", "Couldn't find room");
+            cb({ error: "No Room Found" });
+            return;
+          }
+
+          const rtp = room?.getRouterRtpCapabilties();
+          cb(rtp);
+          return;
+        }
+      );
+
+      socket.on(
+        WebSocketEventType.CREATED_WEBRTC_TRANSPORT,
+        async (_, cb: SocketCallback) => {
+          const room = this._roomList.get(socket.roomId!);
+          if (!room) {
+            logger(WebSocketEventType.ERROR, "Couldn't find room");
+            cb({ error: "Couldn't find room" });
+            return;
+          }
+          logger(WebSocketEventType.CREATED_WEBRTC_TRANSPORT, {
+            name: room._peers.get(socket.id),
+          });
+
+          const params = await room.createWebRtcTransport(socket.id);
+          cb(params);
+          return;
+        }
+      );
+
+      socket.on(
+        WebSocketEventType.CONNECT_TRANSPORT,
+        async ({ transport_id, dtlsParameters }, cb: SocketCallback) => {
+          const room = this._roomList.get(socket.roomId!);
+
+          if (!room) {
+            logger(WebSocketEventType.ERROR, "Couldn't find room");
+            return;
+          }
+          logger(WebSocketEventType.CONNECT_TRANSPORT, {
+            name: room._peers.get(socket.id),
+          });
+          await room.connectPeerTransport(
+            socket.id,
+            transport_id,
+            dtlsParameters
+          );
+        }
+      );
+
+      socket.on(
+        WebSocketEventType.PRODUCE,
+        async (
+          { kind, rtpParameters, producerTransportId },
+          cb: SocketCallback
+        ) => {
+          const room = this._roomList.get(socket.roomId!);
+
+          if (!room) {
+            return cb({ ERROR: "error couldn't find the room" });
+          }
+
+          let producer_id = (await room.produce(
+            socket.id,
+            producerTransportId,
+            rtpParameters,
+            kind
+          )) as string;
+
+          logger(WebSocketEventType.PRODUCE, {
+            type: `${kind}`,
+            name: `${room._peers.get(socket.id)!.name}`,
+            id: `${producer_id}`,
+          });
+
+          cb({
+            producer_id,
+          });
+        }
+      );
     });
   }
 }

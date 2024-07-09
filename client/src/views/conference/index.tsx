@@ -18,12 +18,13 @@ import Avvvatars from "avvvatars-react";
 import moment from "moment";
 import { Dialog } from "@mui/material";
 import { RxCross2 } from "react-icons/rx";
-
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import "../../styles/chat_scrollBar.css";
 import { get_messages_chats_fromRedis } from "../../features/server_calls/get_message_redis";
 import { post_message_toRedis } from "../../features/server_calls/post_message_redis";
+
+// styles
+import "../../styles/chat_scrollBar.css";
+import { RtpCapabilities } from "mediasoup-client/lib/RtpParameters";
+import { Device } from "mediasoup-client";
 
 const RoomIndex = () => {
   const { roomId, name } = useParams();
@@ -38,6 +39,7 @@ const RoomIndex = () => {
 
   //references
   const socketRef = useRef<Socket | null>(null);
+  const DeviceRef = useRef<Device | null>(null);
 
   useEffect(() => {
     const socket = io(config.ws.url);
@@ -124,17 +126,18 @@ const RoomIndex = () => {
     await createRoom();
     await joinRoom();
     await getCurrentUsers();
+    await getRouterRTPCapabilties();
   };
 
   const createRoom = async () => {
     await sendRequest(WebSocketEventType.CREATE_ROOM, { roomId });
   };
   const joinRoom = async () => {
-    const resp = await sendRequest(WebSocketEventType.JOIN_ROOM, {
+    const resp = (await sendRequest(WebSocketEventType.JOIN_ROOM, {
       roomId,
       name,
-    });
-    console.log(resp);
+    })) as { message: string };
+    console.info(resp.message);
   };
   const getCurrentUsers = async () => {
     const users = (await sendRequest(
@@ -142,6 +145,32 @@ const RoomIndex = () => {
       {}
     )) as { users: Peer[] };
     setUsersInRoom(users.users);
+  };
+
+  const getRouterRTPCapabilties = async () => {
+    const rtp = (await sendRequest(
+      WebSocketEventType.GET_ROUTER_RTP_CAPABILITIES,
+      {}
+    )) as RtpCapabilities;
+    if (!rtp) {
+      console.error("Couldn't get RTP for device");
+      return;
+    }
+    await loadDevice(rtp);
+  };
+
+  const loadDevice = async (rtp: RtpCapabilities) => {
+    if (socketRef.current && !DeviceRef.current) {
+      const device = new Device();
+      await device.load({ routerRtpCapabilities: rtp });
+      DeviceRef.current = device;
+      console.log("--- Device Loaded successfully with RTP capabilities ---");
+      console.log(rtp);
+    } else {
+      console.error(
+        "Couldn't load device. check socket or theres current active device"
+      );
+    }
   };
 
   function sendRequest(type: WebSocketEventType, data: any) {
@@ -331,18 +360,18 @@ const RoomChat = ({
               <div className="flex flex-col justify-center items-start">
                 <p
                   className={twMerge(
-                    bundle.user.id === userId && "text-blue-500"
+                    bundle.user.id === userId && "text-pink-500"
                   )}
                 >
                   {bundle.user.id === userId ? "You" : bundle.user.name}
-                </p>{" "}
+                </p>
                 <p className="text-[9px] text-white/60 h-full  flex items-center justify-end">
                   {moment(bundle.messages[0].createdAt).format("LT")}
                 </p>
               </div>
             </div>
 
-            <div className="flex w-full flex-col ml-3">
+            <div className="flex w-full flex-col ml-5">
               {bundle.messages.map((chat, index) => (
                 <div
                   key={index}
