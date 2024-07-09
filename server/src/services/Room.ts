@@ -3,6 +3,7 @@ import Peer from "./Peer";
 import {
   MediaKind,
   Router,
+  RtpCapabilities,
   RtpParameters,
   Worker,
 } from "mediasoup/node/lib/types";
@@ -31,7 +32,7 @@ export default class Room {
     if (this._peers.has(socketId)) {
       return;
     }
-    this._peers.set(socketId, new Peer(socketId, name));
+    this._peers.set(socketId, new Peer(socketId, name, this.io));
     return this._peers.get(socketId)!;
   }
 
@@ -145,6 +146,57 @@ export default class Room {
         },
       ]);
     });
+  }
+
+  async consume(
+    socket_id: string,
+    consumer_transport_id: string,
+    producer_id: string,
+    rtpCapabilities: RtpCapabilities
+  ) {
+    const routerCanConsume = this._router?.canConsume({
+      producerId: producer_id,
+      rtpCapabilities,
+    });
+    if (!routerCanConsume) {
+      console.warn("Router cannot consume the given producer");
+      return;
+    }
+
+    const peer = this._peers.get(socket_id);
+
+    if (!peer) {
+      console.warn("No Peer found with the given Id");
+      return;
+    }
+
+    const consumer_created = await peer.createConsumer(
+      consumer_transport_id,
+      producer_id,
+      rtpCapabilities
+    );
+
+    if (!consumer_created) {
+      console.log("Couldn't create consumer");
+      return;
+    }
+
+    const { consumer, params } = consumer_created;
+
+    consumer.on("producerclose", () => {
+      console.log("Consumer closed due to close event in producer id", {
+        name: peer.name,
+        consumer_id: consumer.id,
+      });
+
+      peer.removeConsumer(consumer.id);
+
+      this.io.to(socket_id).emit(WebSocketEventType.CONSUMER_CLOSED, {
+        consumer_id: consumer.id,
+      });
+    });
+
+    return params;
   }
 
   broadCast(socket_id: string, name: string, data: any) {

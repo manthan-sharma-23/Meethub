@@ -243,6 +243,48 @@ export class SocketService {
           });
         }
       );
+
+      socket.on(
+        WebSocketEventType.CLOSE_PRODUCER,
+        ({ producer_id }, cb: SocketCallback) => {
+          const room = this._roomList.get(socket.roomId!)!;
+          console.log(WebSocketEventType.CLOSE_PRODUCER, producer_id);
+
+          if (room) {
+            room._peers.get(socket.id)?.closeProducer(producer_id);
+          }
+        }
+      );
+
+      socket.on(
+        WebSocketEventType.CONSUME,
+        async (
+          { consumerTransportId, producerId, rtpCapabilities },
+          cb: SocketCallback
+        ) => {
+          const room = this._roomList.get(socket.roomId!);
+
+          if (!room) {
+            console.warn("No room associated with the id ");
+            return;
+          }
+
+          const params = await room.consume(
+            socket.id,
+            consumerTransportId,
+            producerId,
+            rtpCapabilities
+          );
+
+          if (!params) {
+            console.log("Consumer params couldn't be passed");
+
+            return;
+          }
+
+          cb(params);
+        }
+      );
     });
   }
 }
