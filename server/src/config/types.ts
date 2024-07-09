@@ -7,6 +7,9 @@ export enum WebSocketEventType {
   USER_JOINED = "userJoined",
   GET_IN_ROOM_USERS = "getInRoomUsers",
 
+  // ROOM CHAT
+  USER_CHAT = "userChatMessage",
+
   ERROR = "error",
   DISCONNECT = "disconnect",
 

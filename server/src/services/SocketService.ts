@@ -3,9 +3,16 @@ import * as http from "http";
 import { config } from "../config/config";
 import { WebSocketEventType } from "../config/types";
 import Room from "./Room";
+import Peer from "./Peer";
 
 interface SocketCallback {
   (response: any): void;
+}
+
+interface ChatMessage {
+  user: Peer;
+  data: string;
+  createdAt: Date;
 }
 
 export class SocketService {
@@ -116,6 +123,10 @@ export class SocketService {
           cb({ users: room.getCurrentPeers() });
         }
       );
+
+      socket.on(WebSocketEventType.USER_CHAT, (msg) => {
+        socket.to(socket.roomId!).emit(WebSocketEventType.USER_CHAT, msg);
+      });
     });
   }
 }
