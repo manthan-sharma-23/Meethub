@@ -26,7 +26,7 @@ const HomeIndex = () => {
         />
         <button
           onClick={() => navigate(`/r/${roomId}/u/${name}`)}
-          className="bg-white text-black p-2 w-[7rem] rounded-full text-lg flex items-center justify-center hover:bg-white/80 transition-all"
+          className="bg-white font-bold text-black p-2 w-[7rem] rounded-full text-lg flex items-center justify-center hover:bg-white/80 transition-all"
         >
           Join
         </button>

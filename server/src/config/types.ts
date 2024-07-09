@@ -1,13 +1,18 @@
 export enum WebSocketEventType {
+  // ROOM EVENTS
+  CREATE_ROOM = "createRoom",
+  JOIN_ROOM = "joinRoom",
+  EXIT_ROOM = "exitRoom",
+  USER_LEFT = "userLeft",
+  USER_JOINED = "userJoined",
+  GET_IN_ROOM_USERS = "getInRoomUsers",
+
   ERROR = "error",
   DISCONNECT = "disconnect",
-  EXIT_ROOM = "exitRoom",
 
   CLOSE_PRODUCER = "closeProducer",
 
   // server side
-  CREATE_ROOM = "createRoom",
-  JOIN_ROOM = "joinRoom",
   GET_PRODUCERS = "getProducers",
   GET_ROUTER_RTP_CAPABILITIES = "getRouterRtpCapabilities",
   CREATE_WEBRTC_TRANSPORT = "createWebRtcTransport",
