@@ -162,7 +162,10 @@ const RoomIndex = () => {
 
   const sendRoomChat = (msg: ChatMessage) => {
     if (msg.data && roomId) {
-      sendRequest(WebSocketEventType.USER_CHAT, msg);
+      sendRequest(WebSocketEventType.USER_CHAT, {
+        ...msg,
+        data: msg.data,
+      });
       setRoomChatValue(null);
       post_message_toRedis(msg, roomId);
     }
@@ -264,13 +267,13 @@ const RoomIndex = () => {
                     setRoomChatValue(e.target.value);
                   }}
                   placeholder="Enter your message here"
-                  className="placeholder:italic focus:border-2 focus:border-white/40 placeholder:text-white/60 p-2 text-[1rem] outline-none border h-full w-[80%] border-white/50 focus:ring-offset-white focus-within:ring-[1.5px] focus:ring-gray-100/70 rounded-md bg-transparent  text-white/80"
+                  className="placeholder:italic focus:border-2 focus:border-blue-500/30 placeholder:text-white/60 p-2 text-[1rem] outline-none border h-full w-[80%] border-white/50  focus-within:ring-[1.5px] focus:ring-blue-600 rounded-md bg-transparent  text-white/80"
                 />
                 <button
                   onClick={() => {
                     const message = {
                       user: { id: socketRef.current!.id!, name: name! },
-                      data: roomChatValue,
+                      data: roomChatValue?.trim(),
                       createdAt: new Date(),
                     };
                     if (message.data !== null) {
@@ -326,7 +329,13 @@ const RoomChat = ({
             <div className=" flex justify-start items-center gap-2">
               <Avvvatars value={bundle.user.name} size={22} />
               <div className="flex flex-col justify-center items-start">
-                <p>{bundle.user.id === userId ? "You" : bundle.user.name}</p>{" "}
+                <p
+                  className={twMerge(
+                    bundle.user.id === userId && "text-blue-500"
+                  )}
+                >
+                  {bundle.user.id === userId ? "You" : bundle.user.name}
+                </p>{" "}
                 <p className="text-[9px] text-white/60 h-full  flex items-center justify-end">
                   {moment(bundle.messages[0].createdAt).format("LT")}
                 </p>
@@ -341,7 +350,7 @@ const RoomChat = ({
                     "h-auto w-full px-2 flex items-center justify-start mb-1"
                   }
                 >
-                  <div className="bg-black/60 text-white w-auto inline-block pl-1 pr-4 rounded-md font-sans">
+                  <div className="bg-blue-700 py-[3px] text-white w-auto inline-block pl-2 pr-4 rounded-md font-sans">
                     <p className="text-[1rem]">{chat.data}</p>
                   </div>
                 </div>
