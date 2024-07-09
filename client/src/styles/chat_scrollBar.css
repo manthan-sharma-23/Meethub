@@ -1,0 +1,16 @@
+.chatScrollBar::-webkit-scrollbar {
+  overflow-y: scroll;
+}
+
+.chatScrollBar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatScrollBar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatScrollBar::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 10px;
+}

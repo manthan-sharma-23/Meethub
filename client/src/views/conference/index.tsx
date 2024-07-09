@@ -7,14 +7,21 @@ import { TbMicrophoneFilled, TbMicrophoneOff } from "react-icons/tb";
 import { useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import { twMerge } from "tailwind-merge";
-import { config, Peer, WebSocketEventType } from "../../config/config";
-import Slider from "react-slick";
+import {
+  ChatMessage,
+  config,
+  Peer,
+  sortAndBundleMessages,
+  WebSocketEventType,
+} from "../../config/config";
 import Avvvatars from "avvvatars-react";
+import moment from "moment";
+import { Dialog } from "@mui/material";
+import { RxCross2 } from "react-icons/rx";
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { Dialog } from "@mui/material";
-import { RxCross2 } from "react-icons/rx";
+import "../../styles/chat_scrollBar.css";
 
 const RoomIndex = () => {
   const { roomId, name } = useParams();
@@ -24,6 +31,9 @@ const RoomIndex = () => {
   const [IsChatActive, setIsChatActive] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
   const [usersInRoom, setUsersInRoom] = useState<Peer[]>([]);
+  const [roomChatValue, setRoomChatValue] = useState<string | null>(null);
+  const [roomChat, setRoomChat] = useState<ChatMessage[]>([]);
+
   //references
   const socketRef = useRef<Socket | null>(null);
 
@@ -62,6 +72,10 @@ const RoomIndex = () => {
         userLeft(args);
         break;
 
+      case WebSocketEventType.USER_CHAT:
+        changeRoomChat(args);
+        break;
+
       default:
         break;
     }
@@ -74,6 +88,15 @@ const RoomIndex = () => {
   const userJoined = (args: any) => {
     const user = args.user as Peer;
     setUsersInRoom((v) => [...v, user]);
+  };
+
+  const changeRoomChat = (args: ChatMessage) => {
+    console.log(args);
+
+    setRoomChat((v) => [
+      ...v,
+      { ...args, createdAt: new Date(args.createdAt) },
+    ]);
   };
 
   const beforeunload = async () => {
@@ -121,6 +144,13 @@ const RoomIndex = () => {
     });
   }
 
+  const sendRoomChat = (msg: ChatMessage) => {
+    if (msg.data) {
+      sendRequest(WebSocketEventType.USER_CHAT, msg);
+      setRoomChatValue(null);
+    }
+  };
+
   return (
     <div className="h-screen w-screen bg-dark flex flex-col overflow-hidden text-white p-0">
       <div className="h-[100vh] w-full flex justify-center items-center p-1 ">
@@ -164,11 +194,14 @@ const RoomIndex = () => {
           <div
             onClick={() => setShowPeople((v) => !v)}
             className={twMerge(
-              " transition-all h-[3rem] w-[3rem] border-2 bg-white hover:bg-white/85 cursor-pointer hover:text-blue-600 text-black text-2xl flex justify-center items-center rounded-full",
+              "relative  transition-all h-[3rem] w-[3rem] border-2 bg-white hover:bg-white/85 cursor-pointer hover:text-blue-600 text-black text-2xl flex justify-center items-center rounded-full",
               showPeople && "text-blue-600"
             )}
           >
             <BsPeopleFill />
+            <p className="h-5 w-5  flex items-center justify-center absolute -right-1 -top-1 text-sm bg-red-500 p-1 font-medium text-white rounded-full">
+              {usersInRoom.length}
+            </p>
           </div>
         </div>
         <UserCarousel usersInRoom={usersInRoom} />
@@ -183,10 +216,103 @@ const RoomIndex = () => {
                 <RxCross2 />
               </p>
             </div>
-            <div className="h-[90%] w-full px-7"></div>
+            <div className="h-[90%] w-full px-7 flex flex-col items-center justify-center">
+              <div className="h-[93%] w-full ">
+                {roomChat && (
+                  <RoomChat
+                    roomChat={roomChat}
+                    userId={socketRef.current?.id!}
+                  />
+                )}
+              </div>
+              <div className="h-[7%] w-full  flex justify-center items-center gap-3">
+                <input
+                  onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (event.key === "Enter") {
+                      const message = {
+                        user: { id: socketRef.current!.id!, name: name! },
+                        data: roomChatValue,
+                        createdAt: new Date(),
+                      };
+                      if (message.data !== null) {
+                        // @ts-ignore
+                        setRoomChat((v) => [...v, message]);
+                        // @ts-ignore
+                        sendRoomChat(message);
+                      }
+                    }
+                  }}
+                  value={roomChatValue || ""}
+                  onChange={(e) => {
+                    setRoomChatValue(e.target.value);
+                  }}
+                  placeholder="Enter your message here"
+                  className="placeholder:italic focus:border-2 focus:border-white/40 placeholder:text-white/60 p-2 text-[1rem] outline-none border h-full w-[80%] border-white/50 focus:ring-offset-white focus-within:ring-[1.5px] focus:ring-gray-100/70 rounded-md bg-transparent  text-white/80"
+                />
+                <button
+                  onClick={() => {
+                    const message = {
+                      user: { id: socketRef.current!.id!, name: name! },
+                      data: roomChatValue,
+                      createdAt: new Date(),
+                    };
+                    if (message.data !== null) {
+                      // @ts-ignore
+                      setRoomChat((v) => [...v, message]);
+                      // @ts-ignore
+                      sendRoomChat(message);
+                    }
+                  }}
+                  className="w-[15%] h-full bg-white/90 rounded-md text-black font-poppins font-medium hover:bg-white/70"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
           </div>
         </Dialog>
       </div>
+    </div>
+  );
+};
+
+const RoomChat = ({
+  roomChat,
+  userId,
+}: {
+  roomChat: ChatMessage[];
+  userId: string;
+}) => {
+  const bundledChat = sortAndBundleMessages(roomChat);
+  return (
+    <div className="h-full w-full  flex flex-col overflow-y-scroll overflow-x-hidden chatScrollBar">
+      {bundledChat &&
+        bundledChat.map((bundle) => (
+          <div className="flex flex-col gap-2 items-start justify-center mb-3">
+            <div className=" flex justify-start items-center gap-2">
+              <Avvvatars value={bundle.user.name} size={22} />
+              <p>{bundle.user.id === userId ? "You" : bundle.user.name}</p>
+            </div>
+
+            <div className="flex w-full flex-col ml-3">
+              {bundle.messages.map((chat, index) => (
+                <div
+                  key={index}
+                  className={
+                    "h-auto w-full px-2 flex items-center justify-start mb-1"
+                  }
+                >
+                  <div className="bg-black/60 text-white w-auto inline-block pl-1 pr-4 rounded-md font-sans">
+                    <p className="text-[1rem]">{chat.data}</p>
+                    <p className="text-[10px] text-white/60">
+                      {moment(chat.createdAt).format("LT")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
     </div>
   );
 };
@@ -197,7 +323,9 @@ const UserCarousel = ({ usersInRoom }: { usersInRoom: Peer[] }) => {
       {usersInRoom.map((user) => (
         <div
           key={user.id}
-          className=" overflow-hidden relative h-[40vh] w-[40vw] border border-white/30 bg-black/10 rounded-xl p-2 flex justify-center items-center"
+          className={twMerge(
+            "overflow-hidden relative h-[40vh] w-[40vw] border border-white/30 bg-black/10 rounded-xl p-2 flex justify-center items-center"
+          )}
         >
           <p className="absolute left-0 bottom-0 text-lg p-2 px-3 w-auto h-auto bg-black/20">
             {user.name}
