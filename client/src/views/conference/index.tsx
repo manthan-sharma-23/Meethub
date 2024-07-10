@@ -12,7 +12,7 @@ import {
 } from "react";
 import { BsPeopleFill } from "react-icons/bs";
 import { FaVideo } from "react-icons/fa";
-import { FaVideoSlash } from "react-icons/fa6";
+import { FaPaperclip, FaVideoSlash } from "react-icons/fa6";
 import { PiChatsTeardropDuotone, PiTelevisionSimple } from "react-icons/pi";
 import { TbMicrophoneFilled, TbMicrophoneOff } from "react-icons/tb";
 import { useParams } from "react-router-dom";
@@ -29,7 +29,7 @@ import {
 } from "../../config/config";
 import Avvvatars from "avvvatars-react";
 import moment from "moment";
-import { Dialog } from "@mui/material";
+import { Button, Dialog, Snackbar } from "@mui/material";
 import { RxCross2 } from "react-icons/rx";
 import { get_messages_chats_fromRedis } from "../../features/server_calls/get_message_redis";
 import { post_message_toRedis } from "../../features/server_calls/post_message_redis";
@@ -63,6 +63,10 @@ const RoomIndex = () => {
   const [remoteStreams, setRemoteStreams] = useState<RemoteStream[]>([]);
   const [producers, setProducers] = useState<ProducerContainer[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [notificationBar, setNotificationBar] = useState<{
+    open: boolean;
+    data: string;
+  }>({ open: false, data: "" });
 
   const socketRef = useRef<Socket | null>(null);
   const DeviceRef = useRef<Device | null>(null);
@@ -169,12 +173,15 @@ const RoomIndex = () => {
   };
 
   const userLeft = (args: any) => {
+    console.log("USER LEFT ARS", args);
+
     const user = args.user as Peer;
     setUsersInRoom((v) => v.filter((peer) => peer.id !== user.id));
   };
   const userJoined = (args: any) => {
     const user = args.user as Peer;
     setUsersInRoom((v) => [...v, user]);
+    openSnackbar(args.message);
   };
 
   const changeRoomChat = (args: ChatMessage) => {
@@ -512,6 +519,27 @@ const RoomIndex = () => {
     }
   };
 
+  const openSnackbar = (data: string) => {
+    setNotificationBar({
+      data,
+      open: true,
+    });
+
+    setTimeout(() => {
+      setNotificationBar({
+        data: "",
+        open: false,
+      });
+    }, 3000);
+  };
+
+  const closeSnackBar = () => {
+    setNotificationBar({
+      data: "",
+      open: false,
+    });
+  };
+
   return (
     <div className="h-screen w-screen bg-dark flex flex-col overflow-hidden text-white p-0">
       <div className="h-[100vh] w-full flex justify-center items-center p-1 ">
@@ -561,8 +589,20 @@ const RoomIndex = () => {
           >
             <BsPeopleFill />
             <p className="h-5 w-5  flex items-center justify-center absolute -right-1 -top-1 text-sm bg-red-500 p-1 font-medium text-white rounded-full">
-              {usersInRoom.length}
+              {usersInRoom.length + 1}
             </p>
+          </div>
+          <div
+            onClick={() => {
+              navigator.clipboard.writeText(roomId!).then(() => {
+                openSnackbar("Room Id copied to clipboard");
+              });
+            }}
+            className={twMerge(
+              " transition-all h-[3rem] w-[3rem]  bg-transparent hover:bg-white/10  cursor-pointer text-white/50 hover:text-white/70 text-xl flex justify-center items-center rounded-full"
+            )}
+          >
+            <FaPaperclip />
           </div>
         </div>
         <div className="h-full w-[95vw] p-3 overflow-hidden flex flex-wrap items-center justify-center gap-4">
@@ -641,6 +681,17 @@ const RoomIndex = () => {
           </div>
         </Dialog>
       </div>
+      <Snackbar
+        open={notificationBar.open}
+        autoHideDuration={6000}
+        message={notificationBar.data}
+        action={
+          <Button onClick={closeSnackBar} color="primary" size="small">
+            <RxCross2 />
+          </Button>
+        }
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+      />
     </div>
   );
 };
