@@ -45,14 +45,16 @@ export default class Room {
     return peer;
   }
 
-  public getCurrentPeers() {
+  public getCurrentPeers(socketId: string) {
     const peers: { id: string; name: string }[] = [];
-    Array.from(this._peers.keys()).forEach((peerId) => {
-      if (this._peers.has(peerId)) {
-        const { id, name } = this._peers.get(peerId)!;
-        peers.push({ id, name });
-      }
-    });
+    Array.from(this._peers.keys())
+      .filter((key) => key !== socketId)
+      .forEach((peerId) => {
+        if (this._peers.has(peerId)) {
+          const { id, name } = this._peers.get(peerId)!;
+          peers.push({ id, name });
+        }
+      });
 
     return peers;
   }
@@ -221,6 +223,7 @@ export default class Room {
     peer.closeProducer(producer_id);
     this.broadCast(socketId, WebSocketEventType.PRODUCER_CLOSED, {
       producer_id,
+      userId: peer.id,
     });
     return;
   }

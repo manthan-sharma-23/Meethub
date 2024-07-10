@@ -123,7 +123,7 @@ export class SocketService {
             console.log("No room present with the id");
             return;
           }
-          cb({ users: room.getCurrentPeers() });
+          cb({ users: room.getCurrentPeers(socket.id) });
         }
       );
 

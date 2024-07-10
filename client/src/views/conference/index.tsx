@@ -1,7 +1,15 @@
 // styles
 import "../../styles/chat_scrollBar.css";
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import {
+  memo,
+  MutableRefObject,
+  RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { BsPeopleFill } from "react-icons/bs";
 import { FaVideo } from "react-icons/fa";
 import { FaVideoSlash } from "react-icons/fa6";
@@ -27,7 +35,7 @@ import { get_messages_chats_fromRedis } from "../../features/server_calls/get_me
 import { post_message_toRedis } from "../../features/server_calls/post_message_redis";
 import { MediaKind, RtpCapabilities } from "mediasoup-client/lib/RtpParameters";
 import { Device } from "mediasoup-client";
-import { Consumer, Transport } from "mediasoup-client/lib/types";
+import { Consumer, Producer, Transport } from "mediasoup-client/lib/types";
 import { mergeData, MergedData } from "../../config/helpers/helpers";
 
 export interface ProducerContainer {
@@ -54,12 +62,15 @@ const RoomIndex = () => {
   const [roomChat, setRoomChat] = useState<ChatMessage[]>([]);
   const [remoteStreams, setRemoteStreams] = useState<RemoteStream[]>([]);
   const [producers, setProducers] = useState<ProducerContainer[]>([]);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const DeviceRef = useRef<Device | null>(null);
   const ProducerRef = useRef<Transport | null>(null);
   const ConsumerRef = useRef<Transport | null>(null);
   const consumers = useRef<Map<string, Consumer>>(new Map());
+  const videoProducer = useRef<Producer | null>(null);
+  const audioProducer = useRef<Producer | null>(null);
 
   useEffect(() => {
     const socket = io(config.ws.url);
@@ -83,12 +94,6 @@ const RoomIndex = () => {
   useEffect(() => {
     getChatsFromServer();
   }, [name, roomId, IsChatActive]);
-
-  useEffect(() => {
-    if (IsVideoOn || IsMicOn) {
-      produce();
-    }
-  }, [IsVideoOn, IsMicOn]);
 
   useEffect(() => {
     producers.forEach((producer) => {
@@ -130,12 +135,24 @@ const RoomIndex = () => {
         newProducers(args);
         break;
 
+      case WebSocketEventType.PRODUCER_CLOSED:
+        closedProducers(args);
+        break;
+
       default:
         break;
     }
   };
 
-  const updateProducers = () => {};
+  const closedProducers = (args: ProducerContainer) => {
+    setProducers((v) =>
+      v.filter((prod) => prod.producer_id !== args.producer_id)
+    );
+  };
+
+  const closeProducer = (producer_id: string) => {
+    sendRequest(WebSocketEventType.CLOSE_PRODUCER, { producer_id });
+  };
 
   const newProducers = (args: ProducerContainer[]) => {
     console.log(args);
@@ -348,34 +365,6 @@ const RoomIndex = () => {
     }
   };
 
-  const produce = useCallback(async () => {
-    if (!ProducerRef.current) {
-      console.log("Producer transport not initialized");
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: IsVideoOn,
-        audio: IsMicOn,
-      });
-
-      const videoTrack = stream.getVideoTracks()[0];
-      const audioTrack = stream.getAudioTracks()[0];
-
-      if (IsVideoOn) {
-        await ProducerRef.current.produce({ track: videoTrack });
-      }
-
-      if (IsMicOn) {
-        await ProducerRef.current.produce({ track: audioTrack });
-      }
-    } catch (error) {
-      console.error("Error in producing media", error);
-      return;
-    }
-  }, [IsVideoOn, IsMicOn]);
-
   function sendRequest(type: WebSocketEventType, data: any) {
     return new Promise((resolve, reject) => {
       if (!socketRef.current) {
@@ -411,7 +400,7 @@ const RoomIndex = () => {
       }
       const { consumer, stream, kind } = data;
       consumers.current.set(consumer.id, consumer);
-      if (kind === "video") {
+      if (kind === "video" || kind === "audio") {
         setRemoteStreams((v) => [...v, data]);
       }
     });
@@ -454,12 +443,81 @@ const RoomIndex = () => {
     };
   };
 
+  const turnMicOn = async () => {
+    if (!IsMicOn) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioStream = stream.getAudioTracks()[0];
+
+      if (ProducerRef.current) {
+        audioProducer.current = await ProducerRef.current.produce({
+          track: audioStream,
+        });
+      }
+
+      //@ts-ignore
+      window.localAudioStream = stream;
+
+      setMicOn(true);
+    } else {
+      // Stop the audio track and release the microphone
+      //@ts-ignore
+      if (window.localAudioStream) {
+        //@ts-ignore
+        window.localAudioStream.getTracks().forEach((track) => track.stop());
+        //@ts-ignore
+        window.localAudioStream = null;
+      }
+
+      if (audioProducer.current) {
+        closeProducer(audioProducer.current.id);
+        audioProducer.current.close();
+      }
+
+      // Set the state or a variable to indicate that the microphone is off
+      setMicOn(false);
+    }
+  };
+
+  const turnVideoOn = async () => {
+    if (!IsVideoOn) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const videoStream = stream.getVideoTracks()[0];
+
+      if (ProducerRef.current) {
+        videoProducer.current = await ProducerRef.current.produce({
+          track: videoStream,
+        });
+      }
+
+      //@ts-ignore
+      window.localStream = stream;
+      setLocalStream(stream);
+
+      setVideoOn(true);
+    } else {
+      //@ts-ignore
+      if (window.localStream) {
+        //@ts-ignore
+        window.localStream.getTracks().forEach((track) => track.stop());
+        //@ts-ignore
+        window.localStream = null;
+      }
+      if (videoProducer.current) {
+        closeProducer(videoProducer.current.id);
+        videoProducer.current.close();
+        setLocalStream(null);
+      }
+
+      setVideoOn(false);
+    }
+  };
+
   return (
     <div className="h-screen w-screen bg-dark flex flex-col overflow-hidden text-white p-0">
       <div className="h-[100vh] w-full flex justify-center items-center p-1 ">
         <div className="h-full w-[5vw] flex flex-col justify-center items-center gap-3 transition-all">
           <div
-            onClick={() => setVideoOn((v) => !v)}
+            onClick={turnVideoOn}
             className={twMerge(
               " transition-all h-[3rem] w-[3rem] border-2 bg-white hover:bg-white/85 cursor-pointer text-gradient-to-r from-blue-500 to-blue-700 text-blue-500 text-xl flex justify-center items-center rounded-full",
               !IsVideoOn && "text-red-600"
@@ -468,7 +526,7 @@ const RoomIndex = () => {
             {IsVideoOn ? <FaVideo /> : <FaVideoSlash />}
           </div>
           <div
-            onClick={() => setMicOn((v) => !v)}
+            onClick={turnMicOn}
             className={twMerge(
               " transition-all h-[3rem] w-[3rem] border-2 bg-white hover:bg-white/85 cursor-pointer text-gradient-to-r from-blue-500 to-blue-700 text-blue-500 text-xl flex justify-center items-center rounded-full",
               !IsMicOn && "text-red-600"
@@ -507,11 +565,15 @@ const RoomIndex = () => {
             </p>
           </div>
         </div>
-        <UserCarousel
-          usersInRoom={usersInRoom}
-          remoteStreams={remoteStreams}
-          producerContainer={producers}
-        />
+        <div className="h-full w-[95vw] p-3 overflow-hidden flex flex-wrap items-center justify-center gap-4">
+          <LocalUserPannel stream={localStream} name={name!} />
+          <UserCarousel
+            usersInRoom={usersInRoom}
+            remoteStreams={remoteStreams}
+            producerContainer={producers}
+            userId={socketRef.current?.id}
+          />
+        </div>
         <Dialog open={IsChatActive}>
           <div className="h-[35vw] w-[60vh] bg-black/95 text-white/80 flex py-2  flex-col items-center justify-center">
             <div className="h-[10%] w-full flex justify-between items-center px-7">
@@ -649,6 +711,47 @@ const RoomChat = ({
   );
 };
 
+const LocalUserPannel = ({
+  stream,
+  name,
+}: {
+  stream: null | MediaStream;
+  name: string;
+}) => {
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  useEffect(() => {
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+      localVideoRef.current.play();
+      localVideoRef.current.volume = 0;
+      localVideoRef.current.autoplay = true;
+    }
+  }, [stream]);
+  return (
+    <div
+      className={twMerge(
+        "overflow-hidden relative h-[40vh] w-[40vw] border border-white/30 bg-black/10 rounded-xl p-2 flex justify-center items-center"
+      )}
+    >
+      {stream ? (
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          className="h-full w-full"
+        />
+      ) : (
+        <>
+          <p className="absolute left-0 bottom-0 text-lg p-2 px-3 w-auto h-auto bg-black/20">
+            You
+          </p>
+          <Avvvatars value={name} size={95} />
+        </>
+      )}
+    </div>
+  );
+};
+
 const UserCarousel = ({
   usersInRoom,
   remoteStreams,
@@ -657,12 +760,13 @@ const UserCarousel = ({
   usersInRoom: Peer[];
   remoteStreams: RemoteStream[];
   producerContainer: ProducerContainer[];
+  userId?: string;
 }) => {
   const users = mergeData(usersInRoom, remoteStreams, producerContainer);
   console.log("USERS", users);
 
   return (
-    <div className="h-full w-[95vw] p-3 overflow-hidden flex flex-wrap items-center justify-center gap-4">
+    <>
       {users.map((user) => (
         <div
           key={user.userId}
@@ -682,31 +786,42 @@ const UserCarousel = ({
           )}
         </div>
       ))}
-      {}
-    </div>
+    </>
   );
 };
 
 const UserPannel = ({ user }: { user: MergedData }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     user.producers.forEach((producer) => {
-      if (producer.kind === "video") {
-        if (videoRef.current) {
-          videoRef.current.srcObject = producer.stream;
-          videoRef.current.play();
-          videoRef.current.volume = 0;
-          videoRef.current.autoplay = true;
-        }
+      if (producer.kind === "video" && videoRef.current) {
+        videoRef.current.srcObject = producer.stream;
+        videoRef.current.play();
+        videoRef.current.volume = 0;
+        videoRef.current.autoplay = true;
+      } else if (producer.kind === "audio" && audioRef.current) {
+        audioRef.current.srcObject = producer.stream;
+        audioRef.current.play();
+        audioRef.current.autoplay = true;
       }
-      
     });
   }, [user]);
 
+  if (!videoRef.current?.srcObject && audioRef.current?.srcObject) {
+    <>
+      <p className="absolute left-0 bottom-0 text-lg p-2 px-3 w-auto h-auto bg-black/20">
+        {user.name}
+      </p>
+      <audio ref={audioRef} autoPlay />
+      <Avvvatars value={user.name} size={95} />
+    </>;
+  }
   return (
     <div className="h-full w-full">
       <video ref={videoRef} autoPlay playsInline className="h-full w-full" />
+      <audio ref={audioRef} autoPlay />
     </div>
   );
 };
