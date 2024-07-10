@@ -14,10 +14,9 @@ import { Server } from "socket.io";
 export default class Peer {
   id: string;
   name: string;
-  transports: Map<string, Transport>;
-  producers: Map<string, Producer>;
-  consumers: Map<string, Consumer>;
-  io: Server;
+  private transports: Map<string, Transport>;
+  private producers: Map<string, Producer>;
+  private consumers: Map<string, Consumer>;
 
   constructor(id: string, name: string, io: Server) {
     this.id = id;
@@ -25,7 +24,6 @@ export default class Peer {
     this.transports = new Map();
     this.producers = new Map();
     this.consumers = new Map();
-    this.io = io;
   }
 
   addTransport(transport: Transport) {
@@ -105,6 +103,10 @@ export default class Peer {
 
     return {
       consumer,
+      user: {
+        id: this.id,
+        name: this.name,
+      },
       params: {
         producerId: producer_id,
         id: consumer.id,
@@ -125,8 +127,6 @@ export default class Peer {
     }
 
     this.producers.delete(producer_id);
-
-    this.io.emit(WebSocketEventType.PRODUCER_CLOSED, { producer_id });
   }
 
   getProducer(producer_id: string) {
@@ -139,5 +139,9 @@ export default class Peer {
 
   removeConsumer(consumerId: string) {
     this.consumers.delete(consumerId);
+  }
+
+  get producers_() {
+    return this.producers;
   }
 }

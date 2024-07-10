@@ -1,7 +1,7 @@
 // styles
 import "../../styles/chat_scrollBar.css";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { BsPeopleFill } from "react-icons/bs";
 import { FaVideo } from "react-icons/fa";
 import { FaVideoSlash } from "react-icons/fa6";
@@ -13,6 +13,7 @@ import { twMerge } from "tailwind-merge";
 import {
   ChatMessage,
   config,
+  ConsumerResult,
   Peer,
   sortAndBundleMessages,
   webRtcTransportParams,
@@ -24,9 +25,22 @@ import { Dialog } from "@mui/material";
 import { RxCross2 } from "react-icons/rx";
 import { get_messages_chats_fromRedis } from "../../features/server_calls/get_message_redis";
 import { post_message_toRedis } from "../../features/server_calls/post_message_redis";
-import { RtpCapabilities } from "mediasoup-client/lib/RtpParameters";
+import { MediaKind, RtpCapabilities } from "mediasoup-client/lib/RtpParameters";
 import { Device } from "mediasoup-client";
-import { Transport } from "mediasoup-client/lib/types";
+import { Consumer, Transport } from "mediasoup-client/lib/types";
+import { mergeData, MergedData } from "../../config/helpers/helpers";
+
+export interface ProducerContainer {
+  producer_id: string;
+  userId: string;
+}
+
+export interface RemoteStream {
+  consumer: Consumer;
+  stream: MediaStream;
+  kind: MediaKind;
+  producerId: string;
+}
 
 const RoomIndex = () => {
   const { roomId, name } = useParams();
@@ -38,11 +52,14 @@ const RoomIndex = () => {
   const [usersInRoom, setUsersInRoom] = useState<Peer[]>([]);
   const [roomChatValue, setRoomChatValue] = useState<string | null>(null);
   const [roomChat, setRoomChat] = useState<ChatMessage[]>([]);
+  const [remoteStreams, setRemoteStreams] = useState<RemoteStream[]>([]);
+  const [producers, setProducers] = useState<ProducerContainer[]>([]);
 
-  //references
   const socketRef = useRef<Socket | null>(null);
   const DeviceRef = useRef<Device | null>(null);
   const ProducerRef = useRef<Transport | null>(null);
+  const ConsumerRef = useRef<Transport | null>(null);
+  const consumers = useRef<Map<string, Consumer>>(new Map());
 
   useEffect(() => {
     const socket = io(config.ws.url);
@@ -72,6 +89,12 @@ const RoomIndex = () => {
       produce();
     }
   }, [IsVideoOn, IsMicOn]);
+
+  useEffect(() => {
+    producers.forEach((producer) => {
+      consume(producer.producer_id);
+    });
+  }, [producers, roomId, name]);
 
   const getChatsFromServer = async () => {
     const data = await get_messages_chats_fromRedis(roomId!);
@@ -103,9 +126,29 @@ const RoomIndex = () => {
         changeRoomChat(args);
         break;
 
+      case WebSocketEventType.NEW_PRODUCERS:
+        newProducers(args);
+        break;
+
       default:
         break;
     }
+  };
+
+  const updateProducers = () => {};
+
+  const newProducers = (args: ProducerContainer[]) => {
+    console.log(args);
+
+    setProducers((v) => [...v, ...args]);
+  };
+
+  const getProducers = async () => {
+    const producers = (await sendRequest(
+      WebSocketEventType.GET_PRODUCERS,
+      {}
+    )) as ProducerContainer[];
+    setProducers(producers);
   };
 
   const userLeft = (args: any) => {
@@ -136,6 +179,8 @@ const RoomIndex = () => {
     await joinRoom();
     await getCurrentUsers();
     await getRouterRTPCapabilties();
+    await createConsumerTransport();
+    await getProducers();
     await createProducerTransport();
   };
 
@@ -176,13 +221,11 @@ const RoomIndex = () => {
       await device.load({ routerRtpCapabilities: rtp });
       DeviceRef.current = device;
       console.log("--- Device Loaded successfully with RTP capabilities ---");
-      console.log(rtp);
       return;
     } else {
       console.error(
         "Couldn't load device. check socket or theres current active device"
       );
-
       return;
     }
   };
@@ -256,6 +299,55 @@ const RoomIndex = () => {
     }
   };
 
+  const createConsumerTransport = async () => {
+    if (ConsumerRef.current) {
+      console.log("Already initialized a consumer transport");
+      return;
+    }
+    try {
+      const data = (await sendRequest(
+        WebSocketEventType.CREATE_WEBRTC_TRANSPORT,
+        { forceTcp: false }
+      )) as { params: webRtcTransportParams };
+
+      if (!data) {
+        throw new Error("No Transport created");
+      }
+      console.log("Consumer Transport :: ", data);
+      if (!DeviceRef.current || !socketRef.current) {
+        console.error("No devie or socket found");
+        return;
+      }
+      ConsumerRef.current = DeviceRef.current.createRecvTransport(data.params);
+
+      ConsumerRef.current.on("connect", async ({ dtlsParameters }, cb, eb) => {
+        sendRequest(WebSocketEventType.CONNECT_TRANSPORT, {
+          transport_id: ConsumerRef.current!.id,
+          dtlsParameters,
+        })
+          .then(cb)
+          .catch(eb);
+      });
+
+      ConsumerRef.current.on("connectionstatechange", (state) => {
+        console.log("Consumer state", state);
+        if (state === "connected") {
+          console.log("--- Connected Consumer Transport ---");
+        }
+        if (state === "disconnected") {
+          ConsumerRef.current?.close();
+        }
+      });
+
+      const producers = (await sendRequest(
+        WebSocketEventType.GET_PRODUCERS,
+        {}
+      )) as { producer_id: string }[];
+    } catch (error) {
+      console.log("error creating consumer transport", error);
+    }
+  };
+
   const produce = useCallback(async () => {
     if (!ProducerRef.current) {
       console.log("Producer transport not initialized");
@@ -311,6 +403,57 @@ const RoomIndex = () => {
     }
   };
 
+  const consume = (producerId: string) => {
+    getConsumerStream(producerId).then((data) => {
+      if (!data) {
+        console.log("Couldn't load stream");
+        return;
+      }
+      const { consumer, stream, kind } = data;
+      consumers.current.set(consumer.id, consumer);
+      if (kind === "video") {
+        setRemoteStreams((v) => [...v, data]);
+      }
+    });
+  };
+
+  const getConsumerStream = async (producerId: string) => {
+    if (!DeviceRef.current) {
+      console.log("No device found");
+      return;
+    }
+    if (!ConsumerRef.current) {
+      console.warn("No current consumer transport");
+      return;
+    }
+    const rtpCapabilities = DeviceRef.current.rtpCapabilities;
+    const data = (await sendRequest(WebSocketEventType.CONSUME, {
+      rtpCapabilities,
+      consumerTransportId: ConsumerRef.current.id,
+      producerId,
+    })) as ConsumerResult;
+
+    const { id, kind, rtpParameters } = data;
+    let codecOptions = {};
+
+    const consumer = await ConsumerRef.current.consume({
+      id,
+      producerId,
+      kind,
+      rtpParameters,
+    });
+
+    const stream = new MediaStream();
+    stream.addTrack(consumer.track);
+
+    return {
+      consumer,
+      stream,
+      kind,
+      producerId,
+    };
+  };
+
   return (
     <div className="h-screen w-screen bg-dark flex flex-col overflow-hidden text-white p-0">
       <div className="h-[100vh] w-full flex justify-center items-center p-1 ">
@@ -364,7 +507,11 @@ const RoomIndex = () => {
             </p>
           </div>
         </div>
-        <UserCarousel usersInRoom={usersInRoom} />
+        <UserCarousel
+          usersInRoom={usersInRoom}
+          remoteStreams={remoteStreams}
+          producerContainer={producers}
+        />
         <Dialog open={IsChatActive}>
           <div className="h-[35vw] w-[60vh] bg-black/95 text-white/80 flex py-2  flex-col items-center justify-center">
             <div className="h-[10%] w-full flex justify-between items-center px-7">
@@ -502,24 +649,68 @@ const RoomChat = ({
   );
 };
 
-const UserCarousel = ({ usersInRoom }: { usersInRoom: Peer[] }) => {
+const UserCarousel = ({
+  usersInRoom,
+  remoteStreams,
+  producerContainer,
+}: {
+  usersInRoom: Peer[];
+  remoteStreams: RemoteStream[];
+  producerContainer: ProducerContainer[];
+}) => {
+  const users = mergeData(usersInRoom, remoteStreams, producerContainer);
+  console.log("USERS", users);
+
   return (
     <div className="h-full w-[95vw] p-3 overflow-hidden flex flex-wrap items-center justify-center gap-4">
-      {usersInRoom.map((user) => (
+      {users.map((user) => (
         <div
-          key={user.id}
+          key={user.userId}
           className={twMerge(
             "overflow-hidden relative h-[40vh] w-[40vw] border border-white/30 bg-black/10 rounded-xl p-2 flex justify-center items-center"
           )}
         >
-          <p className="absolute left-0 bottom-0 text-lg p-2 px-3 w-auto h-auto bg-black/20">
-            {user.name}
-          </p>
-          <Avvvatars value={user.name} size={95} />
+          {user.producers.length <= 0 ? (
+            <>
+              <p className="absolute left-0 bottom-0 text-lg p-2 px-3 w-auto h-auto bg-black/20">
+                {user.name}
+              </p>
+              <Avvvatars value={user.name} size={95} />
+            </>
+          ) : (
+            <MemoizedUserPannel user={user} />
+          )}
         </div>
       ))}
+      {}
     </div>
   );
 };
+
+const UserPannel = ({ user }: { user: MergedData }) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    user.producers.forEach((producer) => {
+      if (producer.kind === "video") {
+        if (videoRef.current) {
+          videoRef.current.srcObject = producer.stream;
+          videoRef.current.play();
+          videoRef.current.volume = 0;
+          videoRef.current.autoplay = true;
+        }
+      }
+      
+    });
+  }, [user]);
+
+  return (
+    <div className="h-full w-full">
+      <video ref={videoRef} autoPlay playsInline className="h-full w-full" />
+    </div>
+  );
+};
+
+const MemoizedUserPannel = memo(UserPannel);
 
 export default RoomIndex;

@@ -1,4 +1,10 @@
-import { DtlsParameters, IceCandidate, IceParameters } from "mediasoup-client/lib/types";
+import {
+  DtlsParameters,
+  IceCandidate,
+  IceParameters,
+  MediaKind,
+  RtpParameters,
+} from "mediasoup-client/lib/types";
 
 export const config = {
   ws: {
@@ -55,6 +61,14 @@ export interface WebSocketEvent {
 export interface Peer {
   id: string;
   name: string;
+}
+export interface ConsumerResult {
+  producerId: string;
+  id: string;
+  kind: MediaKind;
+  rtpParameters: RtpParameters;
+  type: any;
+  producerPaused: boolean;
 }
 
 export interface ChatMessage {

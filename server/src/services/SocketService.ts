@@ -6,7 +6,6 @@ import Room from "./Room";
 import Peer from "./Peer";
 import { getMediasoupWorker } from "..";
 import { logger } from "../helpers/logger";
-import { DtlsParameters } from "mediasoup/node/lib/fbs/web-rtc-transport";
 
 interface SocketCallback {
   (response: any): void;
@@ -32,7 +31,7 @@ export class SocketService {
     try {
       this.listenToWebSockets(this._io);
     } catch (error) {
-      console.log(error);
+      console.log("ERROR in socket", error);
     }
   }
 
@@ -180,7 +179,7 @@ export class SocketService {
             return;
           }
           logger(WebSocketEventType.CREATED_WEBRTC_TRANSPORT, {
-            name: room._peers.get(socket.id),
+            name: room._peers.get(socket.id)?.name,
           });
 
           const params = await room.createWebRtcTransport(socket.id);
@@ -251,7 +250,7 @@ export class SocketService {
           console.log(WebSocketEventType.CLOSE_PRODUCER, producer_id);
 
           if (room) {
-            room._peers.get(socket.id)?.closeProducer(producer_id);
+            room.closeProducer(producer_id, socket.id);
           }
         }
       );

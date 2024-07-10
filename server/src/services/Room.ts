@@ -46,10 +46,11 @@ export default class Room {
   }
 
   public getCurrentPeers() {
-    const peers: Peer[] = [];
+    const peers: { id: string; name: string }[] = [];
     Array.from(this._peers.keys()).forEach((peerId) => {
       if (this._peers.has(peerId)) {
-        peers.push(this._peers.get(peerId)!);
+        const { id, name } = this._peers.get(peerId)!;
+        peers.push({ id, name });
       }
     });
 
@@ -117,10 +118,11 @@ export default class Room {
     return this._router?.rtpCapabilities;
   }
   getProducerListForPeer() {
-    let producerList: { producer_id: string }[] = [];
+    let producerList: { userId: string; producer_id: string }[] = [];
     this._peers.forEach((peer) => {
-      peer.producers.forEach((producer) => {
+      peer.producers_.forEach((producer) => {
         producerList.push({
+          userId: peer.id,
           producer_id: producer.id,
         });
       });
@@ -142,7 +144,7 @@ export default class Room {
       this.broadCast(socketId, WebSocketEventType.NEW_PRODUCERS, [
         {
           producer_id: producer.id,
-          producer_socket_id: socketId,
+          userId: socketId,
         },
       ]);
     });
@@ -208,5 +210,18 @@ export default class Room {
   }
   send(socketId: string, name: string, data: any) {
     this.io.to(socketId).emit(name, data);
+  }
+
+  closeProducer(producer_id: string, socketId: string) {
+    const peer = this._peers.get(socketId);
+    if (!peer) {
+      console.log("No peeer found with the  socket id");
+      return;
+    }
+    peer.closeProducer(producer_id);
+    this.broadCast(socketId, WebSocketEventType.PRODUCER_CLOSED, {
+      producer_id,
+    });
+    return;
   }
 }
