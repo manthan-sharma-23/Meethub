@@ -1,6 +1,8 @@
 import { useState } from "react";
 import cuid from "cuid";
 import { useNavigate } from "react-router-dom";
+import { Button, Input, TextField } from "@mui/material";
+import { ImLoop2 } from "react-icons/im";
 
 const HomeIndex = () => {
   const [roomId, setRoomId] = useState(cuid());
@@ -19,38 +21,46 @@ const HomeIndex = () => {
     navigate(`/r/${roomId}/u/${name}`);
   };
 
-  const onKeyEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKeyEnter = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter") {
       EnterRoom();
     }
   };
 
   return (
-    <div className="bg-dark text-white h-screen w-screen flex justify-start p-[3rem] items-center">
-      <div className="flex flex-col justify-center items-start  text-2xl min-w-[40%] gap-5">
-        <p className="font-semibold">Create or Join Room</p>
-        <input
-          onKeyDown={(e) => onKeyEnter(e)}
-          type="text"
-          value={roomId}
-          onChange={(e) => setRoomId(e.target.value)}
-          className="outline-none text-lg text-black p-2 rounded-lg w-full"
-          placeholder="Enter your roomId"
-        />
-        <input
-          onKeyDown={(e) => onKeyEnter(e)}
-          type="text"
-          value={name || ""}
-          onChange={(e) => setName(e.target.value)}
-          className="outline-none text-lg text-black p-2 rounded-lg w-full"
-          placeholder="Enter your name"
-        />
-        <button
-          onClick={EnterRoom}
-          className="bg-white font-bold text-black p-2 w-[7rem] rounded-full text-lg flex items-center justify-center hover:bg-white/80 transition-all"
-        >
-          Join
-        </button>
+    <div className="bg-white text-white h-screen w-screen flex justify-center p-[3rem] items-center">
+      <div className="w-[30vw] h-[45vh] rounded-lg bg-yellow-50/10 border flex justify-center items-center">
+        <div className="flex flex-col justify-center items-center  text-2xl w-[60%] gap-5  ">
+          <p className="font-semibold text-blue-600">Create or Join Room</p>
+          <div className="flex justify-center h-auto items-center w-full gap-3">
+            <TextField
+              onKeyDown={(e) => onKeyEnter(e)}
+              type="text"
+              value={roomId}
+              fullWidth
+              onChange={(e) => setRoomId(e.target.value)}
+              placeholder="Enter your roomId"
+              label="RoomId"
+            />
+          </div>
+          <TextField
+            onKeyDown={(e) => onKeyEnter(e)}
+            type="text"
+            value={name || ""}
+            fullWidth
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter your name"
+            label="Name"
+          />
+          <Button
+            onClick={EnterRoom}
+            variant="contained"
+            size="medium"
+            sx={{ fontWeight: 600, fontSize: ".9rem" }}
+          >
+            Join
+          </Button>
+        </div>
       </div>
     </div>
   );

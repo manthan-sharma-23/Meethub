@@ -872,7 +872,7 @@ const UserPannel = ({ user }: { user: MergedData }) => {
   return (
     <div className="h-full w-full">
       <video ref={videoRef} autoPlay playsInline className="h-full w-full" />
-      <audio ref={audioRef} autoPlay />
+      <audio ref={audioRef} autoPlay playsInline />
     </div>
   );
 };
