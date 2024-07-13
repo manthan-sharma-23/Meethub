@@ -54,4 +54,8 @@ router.post("/chat", async (req, res) => {
   }
 });
 
+router.get("/test", (req, res) => {
+  return res.send({ test: "In Working condition" });
+});
+
 export default router;

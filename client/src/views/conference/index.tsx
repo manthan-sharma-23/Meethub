@@ -115,6 +115,7 @@ const RoomIndex = () => {
       setRoomChat([]);
     }
   };
+  
   const routeIncommingEvents = ({
     event,
     args,
