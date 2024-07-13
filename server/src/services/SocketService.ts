@@ -6,6 +6,8 @@ import Room from "./Room";
 import Peer from "./Peer";
 import { getMediasoupWorker } from "..";
 import { logger } from "../helpers/logger";
+import { Redis } from "ioredis";
+import { createAdapter } from "@socket.io/redis-adapter";
 
 interface SocketCallback {
   (response: any): void;
@@ -17,6 +19,15 @@ export interface ChatMessage {
   createdAt: Date;
 }
 
+const pubClient = new Redis({
+  port: config.app.redis.port,
+  host: config.app.redis.host,
+  password: config.app.redis.password,
+  username: config.app.redis.username,
+});
+
+const subClient = pubClient.duplicate();
+
 export class SocketService {
   private _io: io.Server;
   private _roomList: Map<string, Room>;
@@ -26,6 +37,7 @@ export class SocketService {
       cors: {
         origin: "*",
       },
+      adapter: createAdapter(pubClient, subClient),
     });
     this._roomList = new Map();
     try {

@@ -115,7 +115,7 @@ const RoomIndex = () => {
       setRoomChat([]);
     }
   };
-  
+
   const routeIncommingEvents = ({
     event,
     args,
@@ -364,10 +364,9 @@ const RoomIndex = () => {
         }
       });
 
-      const producers = (await sendRequest(
-        WebSocketEventType.GET_PRODUCERS,
-        {}
-      )) as { producer_id: string }[];
+      (await sendRequest(WebSocketEventType.GET_PRODUCERS, {})) as {
+        producer_id: string;
+      }[];
     } catch (error) {
       console.log("error creating consumer transport", error);
     }
@@ -431,6 +430,9 @@ const RoomIndex = () => {
     })) as ConsumerResult;
 
     const { id, kind, rtpParameters } = data;
+
+    console.log("ConSUMER DATA :: ", data);
+
     let codecOptions = {};
 
     const consumer = await ConsumerRef.current.consume({
