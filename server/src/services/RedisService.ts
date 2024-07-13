@@ -5,7 +5,14 @@ export class RedisService {
   private redis: Redis;
 
   constructor() {
-    this.redis = new Redis(config.app.redis.url);
+    console.log(config.app.redis.url);
+
+    this.redis = new Redis({
+      port: config.app.redis.port,
+      host: config.app.redis.host,
+      password: config.app.redis.password,
+      username: config.app.redis.username,
+    });
   }
 
   getInstance() {

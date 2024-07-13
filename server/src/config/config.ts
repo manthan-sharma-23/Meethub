@@ -26,9 +26,12 @@ export const config = {
   app: {
     port: 5000,
     redis: {
-      port: process.env.REDIS_PORT || 8200,
+      port: Number(process.env.REDIS_PORT) || 8200,
       channel: "channel",
       url: process.env.REDIS_URL || "redis://localhost:8200/",
+      host: process.env.REDIS_HOST || "",
+      password: process.env.REDIS_PASSWORD || "",
+      username: process.env.REDIS_USERNAME || "",
     },
   },
   mediasoup: {
