@@ -1,7 +1,9 @@
 import { RtpCodecCapability } from "mediasoup/node/lib/RtpParameters";
 import { WorkerLogLevel, WorkerLogTag } from "mediasoup/node/lib/Worker";
 import os from "os";
+import { config as envConfig } from "dotenv";
 
+envConfig();
 const ifaces = os.networkInterfaces();
 
 const getLocalIp = () => {
@@ -24,9 +26,9 @@ export const config = {
   app: {
     port: 5000,
     redis: {
-      port: 8200,
+      port: process.env.REDIS_PORT || 8200,
       channel: "channel",
-      url: "redis://localhost:8200/",
+      url: process.env.REDIS_URL || "redis://localhost:8200/",
     },
   },
   mediasoup: {

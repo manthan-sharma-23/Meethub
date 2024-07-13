@@ -5,7 +5,7 @@ export class RedisService {
   private redis: Redis;
 
   constructor() {
-    this.redis = new Redis({ port: config.app.redis.port });
+    this.redis = new Redis(config.app.redis.url);
   }
 
   getInstance() {
