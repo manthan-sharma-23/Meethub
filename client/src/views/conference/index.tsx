@@ -405,6 +405,8 @@ const RoomIndex = () => {
         console.log("Couldn't load stream");
         return;
       }
+      console.log("CONSUME STREAM DATA",data);
+      
       const { consumer, stream, kind } = data;
       consumers.current.set(consumer.id, consumer);
       if (kind === "video" || kind === "audio") {

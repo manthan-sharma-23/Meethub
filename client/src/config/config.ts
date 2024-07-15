@@ -8,10 +8,10 @@ import {
 
 export const config = {
   ws: {
-    url: "ws://65.2.69.109:5000",
+    url: "ws://localhost:5000",
   },
   server: {
-    url: "http://65.2.69.109:5000",
+    url: "http://localhost:5000",
   },
 };
 export enum WebSocketEventType {

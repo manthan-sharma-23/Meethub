@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis
+    container_name: cache
+    expose:
+      - 6379
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_URL=redis://cache
+
+    depends_on:
+      - redis
+
+    expose:
+      - 5000
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - 3000:8080
+    depends_on:
+      - server
+    expose:
+      - 3000

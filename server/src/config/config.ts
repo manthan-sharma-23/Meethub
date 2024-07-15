@@ -28,7 +28,7 @@ export const config = {
     redis: {
       port: Number(process.env.REDIS_PORT) || 8200,
       channel: "channel",
-      url: process.env.REDIS_URL || "redis://localhost:8200/",
+      url: process.env.REDIS_URL,
       host: process.env.REDIS_HOST || "",
       password: process.env.REDIS_PASSWORD || "",
       username: process.env.REDIS_USERNAME || "",

@@ -8,6 +8,7 @@ import { getMediasoupWorker } from "..";
 import { logger } from "../helpers/logger";
 import { Redis } from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
+import { RedisService } from "./RedisService";
 
 interface SocketCallback {
   (response: any): void;
@@ -19,12 +20,7 @@ export interface ChatMessage {
   createdAt: Date;
 }
 
-const pubClient = new Redis({
-  port: config.app.redis.port,
-  host: config.app.redis.host,
-  password: config.app.redis.password,
-  username: config.app.redis.username,
-});
+const pubClient = new RedisService().getInstance();
 
 const subClient = pubClient.duplicate();
 
@@ -33,6 +29,8 @@ export class SocketService {
   private _roomList: Map<string, Room>;
 
   constructor(server: http.Server) {
+    console.log("Initializing socket server");
+
     this._io = new io.Server(server, {
       cors: {
         origin: "*",
