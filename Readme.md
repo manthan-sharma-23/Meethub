@@ -23,6 +23,7 @@ You can easily run the project using Docker Compose.
 
 1. Ensure you have [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) installed.
 2. In the project root directory, run:
+
    ```bash
    docker-compose up
    ```
