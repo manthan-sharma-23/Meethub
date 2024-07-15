@@ -26,8 +26,8 @@ services:
       context: ./client
       dockerfile: Dockerfile
     ports:
-      - 3000:8080
+      - 8080:8080
     depends_on:
       - server
     expose:
-      - 3000
+      - 8080
