@@ -8,10 +8,10 @@ import {
 
 export const config = {
   ws: {
-    url: "https://meethub-server.publicvm.com/",
+    url: "https://meethub-server.publicvm.com",
   },
   server: {
-    url: "https://meethub-server.publicvm.com/",
+    url: "https://meethub-server.publicvm.com",
   },
 };
 export enum WebSocketEventType {
