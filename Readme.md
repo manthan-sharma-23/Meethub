@@ -1,4 +1,4 @@
-# MeetHub
+# [MeetHub](https://meethub-rooms.vercel.app/)
 
 MeetHub is a robust and scalable video conferencing application that allows users to create and join virtual conference rooms. Users can engage in video, audio, and text chats seamlessly within these rooms.
 
@@ -11,7 +11,7 @@ MeetHub is a robust and scalable video conferencing application that allows user
 
 ## Tech Stack
 
-- **Frontend:** React
+- **Frontend:** React, Tailwind CSS
 - **Server:** Socket.io, Express, Redis (for Pub/Sub)
 - **WebRTC:** Built on top of Mediasoup
 
@@ -28,7 +28,7 @@ You can easily run the project using Docker Compose.
    docker-compose up
    ```
 
-### Manual Setup
+### Manual Setup (Preferable)
 
 For a manual setup, follow these steps:
 
