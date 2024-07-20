@@ -4,7 +4,7 @@ import RoomIndex from "./views/conference";
 
 const App = () => {
   return (
-    <div>
+    <div className="h-screen w-screen">
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomeIndex />} />

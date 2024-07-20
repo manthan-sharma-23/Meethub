@@ -2,6 +2,7 @@ import { useState } from "react";
 import cuid from "cuid";
 import { useNavigate } from "react-router-dom";
 import { Button, TextField } from "@mui/material";
+import lander from "../../assets/icon.png";
 
 const HomeIndex = () => {
   const [roomId, setRoomId] = useState(cuid());
@@ -27,7 +28,13 @@ const HomeIndex = () => {
   };
 
   return (
-    <div className="bg-white text-white h-screen w-screen flex justify-center p-[3rem] items-center">
+    <div className="bg-white text-white h-screen w-screen flex flex-col gap-5 justify-center p-[3rem] items-center">
+      <div className=" text-black flex justify-center items-center gap-2">
+        <img src={lander} className="h-[2.5rem] w-[2.5rem]" />
+        <p className="text-4xl text-blue/90 font-semibold font-poppins">
+          Meethub
+        </p>
+      </div>
       <div className="w-[30vw] h-[45vh] rounded-lg bg-yellow-50/10 border flex justify-center items-center">
         <div className="flex flex-col justify-center items-center  text-2xl w-[60%] gap-5  ">
           <p className="font-semibold text-blue-600">Create or Join Room</p>

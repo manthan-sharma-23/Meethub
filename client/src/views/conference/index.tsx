@@ -29,6 +29,7 @@ import { MediaKind, RtpCapabilities } from "mediasoup-client/lib/RtpParameters";
 import { Device } from "mediasoup-client";
 import { Consumer, Producer, Transport } from "mediasoup-client/lib/types";
 import { mergeData, MergedData } from "../../config/helpers/helpers";
+import { MdCallEnd } from "react-icons/md";
 
 export interface ProducerContainer {
   producer_id: string;
@@ -598,6 +599,16 @@ const RoomIndex = () => {
             )}
           >
             <FaPaperclip />
+          </div>
+          <div
+            onClick={() => {
+              window.location.assign("/");
+            }}
+            className={twMerge(
+              " transition-all h-[3rem] w-[3rem]  bg-red-600 text-white hover:bg-white/10  cursor-pointer  hover:text-white/70 text-2xl flex justify-center items-center rounded-full"
+            )}
+          >
+            <MdCallEnd />
           </div>
         </div>
         <div className="h-full w-[95vw] p-3 overflow-hidden flex flex-wrap items-center justify-center gap-4">
