@@ -1,8 +1,7 @@
 import { useState } from "react";
 import cuid from "cuid";
 import { useNavigate } from "react-router-dom";
-import { Button, Input, TextField } from "@mui/material";
-import { ImLoop2 } from "react-icons/im";
+import { Button, TextField } from "@mui/material";
 
 const HomeIndex = () => {
   const [roomId, setRoomId] = useState(cuid());

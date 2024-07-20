@@ -1,15 +1,7 @@
 // styles
 import "../../styles/chat_scrollBar.css";
 
-import {
-  memo,
-  MutableRefObject,
-  RefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { BsPeopleFill } from "react-icons/bs";
 import { FaVideo } from "react-icons/fa";
 import { FaPaperclip, FaVideoSlash } from "react-icons/fa6";
@@ -405,9 +397,9 @@ const RoomIndex = () => {
         console.log("Couldn't load stream");
         return;
       }
-      console.log("CONSUME STREAM DATA",data);
-      
-      const { consumer, stream, kind } = data;
+      console.log("CONSUME STREAM DATA", data);
+
+      const { consumer, kind } = data;
       consumers.current.set(consumer.id, consumer);
       if (kind === "video" || kind === "audio") {
         setRemoteStreams((v) => [...v, data]);
@@ -434,8 +426,6 @@ const RoomIndex = () => {
     const { id, kind, rtpParameters } = data;
 
     console.log("ConSUMER DATA :: ", data);
-
-    let codecOptions = {};
 
     const consumer = await ConsumerRef.current.consume({
       id,

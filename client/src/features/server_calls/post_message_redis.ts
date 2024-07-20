@@ -2,7 +2,7 @@ import { ChatMessage, config } from "../../config/config";
 
 export const post_message_toRedis = async (
   msg: ChatMessage,
-  roomId: string
+  roomId: string,
 ) => {
   try {
     await fetch(config.server.url + "/api/chat", {

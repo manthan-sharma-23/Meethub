@@ -20,7 +20,6 @@ export function mergeData(
   remoteStreams: RemoteStream[],
   producerContainer: ProducerContainer[]
 ): MergedData[] {
-  const userMap = new Map(usersInRoom.map((user) => [user.id, user.name]));
   const producerMap = new Map<string, ProducerContainer[]>(
     producerContainer.map((prod) => [prod.userId, []])
   );
