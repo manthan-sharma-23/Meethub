@@ -1,5 +1,7 @@
 # [MeetHub](https://meethub-rooms.vercel.app/)
 
+Leave a star please ! ⭐ 😃 
+---
 MeetHub is a robust and scalable video conferencing application that allows users to create and join virtual conference rooms. Users can engage in video, audio, and text chats seamlessly within these rooms.
 
 ## Features
