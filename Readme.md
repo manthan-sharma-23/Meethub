@@ -30,7 +30,7 @@ You can easily run the project using Docker Compose.
    docker-compose up
    ```
 
-### Manual Setup (Preferable)
+### Manual Setup 
 
 For a manual setup, follow these steps:
 
