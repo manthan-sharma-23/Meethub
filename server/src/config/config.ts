@@ -1,26 +1,25 @@
 import { RtpCodecCapability } from "mediasoup/node/lib/RtpParameters";
 import { WorkerLogLevel, WorkerLogTag } from "mediasoup/node/lib/Worker";
-import os from "os";
 import { config as envConfig } from "dotenv";
+import * as os from "os";
 
 envConfig();
 const ifaces = os.networkInterfaces();
 
-const getLocalIp = () => {
-  let localIp = "127.0.0.1";
-  Object.keys(ifaces).forEach((ifname) => {
-    for (const iface of ifaces[ifname]!) {
-      // Ignore IPv6 and 127.0.0.1
-      if (iface.family !== "IPv4" || iface.internal !== false) {
-        continue;
+function getLocalIPv4Address(): string | null {
+  const networkInterfaces = os.networkInterfaces();
+  for (const interfaceName in networkInterfaces) {
+    const interfaces = networkInterfaces[interfaceName];
+    if (interfaces) {
+      for (const iface of interfaces) {
+        if (iface.family === "IPv4" && !iface.internal) {
+          return iface.address;
+        }
       }
-      // Set the local ip to the first IPv4 address found and exit the loop
-      localIp = iface.address;
-      return;
     }
-  });
-  return localIp;
-};
+  }
+  return null;
+}
 
 export const config = {
   app: {
@@ -79,7 +78,7 @@ export const config = {
       listenIps: [
         {
           ip: "0.0.0.0",
-          announcedIp: getLocalIp(), // replace by public IP address
+          announcedIp: getLocalIPv4Address() || "", // replace by public IP address
         },
       ],
       maxIncomingBitrate: 1500000,
