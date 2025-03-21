@@ -81,7 +81,8 @@ export const config = {
       listenIps: [
         {
           ip: "0.0.0.0",
-          announcedIp: getLocalIPv4Address(), // replace by public IP address
+          announcedIp: getLocalIPv4Address(),
+          family: 4 
         },
       ],
       maxIncomingBitrate: 1500000,
