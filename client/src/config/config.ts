@@ -8,12 +8,13 @@ import {
 
 export const config = {
   ws: {
-    url: "https://meethub-server.publicvm.com",
+    url: import.meta.env.VITE_SERVER_URL || process.env.VITE_SERVER_URL,
   },
   server: {
-    url: "https://meethub-server.publicvm.com",
+    url: import.meta.env.VITE_SERVER_URL || process.env.VITE_SERVER_URL,
   },
 };
+
 export enum WebSocketEventType {
   // ROOM EVENTS
   CREATE_ROOM = "createRoom",

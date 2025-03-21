@@ -28,6 +28,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - 8080:8080
+    environment:
+      - VITE_SERVER_URL=http://server:5000
     depends_on:
       - server
     expose:

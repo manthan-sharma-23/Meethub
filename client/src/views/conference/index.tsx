@@ -44,6 +44,11 @@ export interface RemoteStream {
 }
 
 const RoomIndex = () => {
+
+  console.log(config.server);
+
+
+
   const { roomId, name } = useParams();
   const [IsVideoOn, setVideoOn] = useState(false);
   const [IsMicOn, setMicOn] = useState(false);
