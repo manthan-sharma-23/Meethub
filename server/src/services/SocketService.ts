@@ -33,6 +33,8 @@ export class SocketService {
     this._io = new io.Server(server, {
       cors: {
         origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true
       },
       adapter: createAdapter(pubClient, subClient),
     });
