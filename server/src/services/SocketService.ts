@@ -6,7 +6,6 @@ import Room from "./Room";
 import Peer from "./Peer";
 import { getMediasoupWorker } from "..";
 import { logger } from "../helpers/logger";
-import { Redis } from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { RedisService } from "./RedisService";
 
