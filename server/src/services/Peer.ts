@@ -8,7 +8,6 @@ import {
   Transport,
 } from "mediasoup/node/lib/types";
 import { logger } from "../helpers/logger";
-import { WebSocketEventType } from "../config/types";
 import { Server } from "socket.io";
 
 export default class Peer {

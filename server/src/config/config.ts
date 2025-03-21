@@ -6,7 +6,10 @@ import * as os from "os";
 envConfig();
 const ifaces = os.networkInterfaces();
 
-function getLocalIPv4Address(): string | null {
+function getLocalIPv4Address(): string {
+  const personalIp: string = process.env.LOCAL_IP!;
+  if (personalIp) return personalIp;
+
   const networkInterfaces = os.networkInterfaces();
   for (const interfaceName in networkInterfaces) {
     const interfaces = networkInterfaces[interfaceName];
@@ -18,7 +21,7 @@ function getLocalIPv4Address(): string | null {
       }
     }
   }
-  return null;
+  return "";
 }
 
 export const config = {
@@ -78,7 +81,7 @@ export const config = {
       listenIps: [
         {
           ip: "0.0.0.0",
-          announcedIp: getLocalIPv4Address() || "", // replace by public IP address
+          announcedIp: getLocalIPv4Address(), // replace by public IP address
         },
       ],
       maxIncomingBitrate: 1500000,
