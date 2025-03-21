@@ -2,7 +2,7 @@ module.exports = {
     apps: [
         {
             name: "meethub-server",
-            cwd: ".",  // Ensure the correct directory
+            cwd: "./",  
             script: "npm",
             args: "run dev",
             watch: true,
