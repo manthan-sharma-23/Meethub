@@ -10,6 +10,11 @@ import ChatRouter from "./api/chat.api";
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.redirect('/api/test');
+});
+
 app.use("/api", ChatRouter);
 
 let workers: Worker[] = [];
